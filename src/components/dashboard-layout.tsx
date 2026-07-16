@@ -68,6 +68,7 @@ const landlordItems: SidebarItem[] = [
   { label: "Utility Bills", href: "/landlord/utilities", icon: Zap, group: "Finance" },
   { label: "Support", href: "/landlord/support", icon: LifeBuoy, group: "Other" },
   { label: "Reports", href: "/landlord/reports", icon: BarChart3, group: "Other" },
+  { label: "Roles & Staff", href: "/landlord/roles", icon: Shield, group: "Other" },
   { label: "Subscriptions", href: "/landlord/subscriptions", icon: Crown, group: "Other" },
 ];
 
