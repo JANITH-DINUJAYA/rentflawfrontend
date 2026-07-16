@@ -122,10 +122,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (initialized && !user) {
-      router.push("/login");
+      // Redirect to portal-specific login based on current URL
+      const loginPath =
+        pathname.startsWith("/admin") ? "/admin/login" :
+        pathname.startsWith("/tenant") ? "/tenant/login" :
+        "/landlord/login";
+      router.push(loginPath);
     }
-  }, [initialized, user, router]);
-
+  }, [initialized, user, router, pathname]);
 
   if (!initialized) {
     return (
