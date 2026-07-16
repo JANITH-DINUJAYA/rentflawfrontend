@@ -130,7 +130,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const role = (user?.global_role || "LANDLORD") as keyof typeof portalConfig;
+  // Detect portal from URL path first — this works before auth is connected
+  const portalRole: keyof typeof portalConfig =
+    pathname.startsWith("/admin") ? "SAAS_ADMIN" :
+    pathname.startsWith("/tenant") ? "TENANT" :
+    (user?.global_role as keyof typeof portalConfig) || "LANDLORD";
+
+  const role = portalRole;
   const config = portalConfig[role] || portalConfig.LANDLORD;
   const sidebarItems =
     role === "SAAS_ADMIN" ? adminItems :
