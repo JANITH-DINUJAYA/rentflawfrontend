@@ -48,106 +48,240 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ═══════════════════════════════════════════════════
+   BASE TOKENS  — Light Mode
+   Primary Brand: Blue Ribbon #2D69FF
+═══════════════════════════════════════════════════ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.13 0.02 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.13 0.02 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  
-  /* Default Theme: Shamrock Green */
-  --theme-primary: oklch(0.48 0.16 142);
-  --theme-primary-foreground: oklch(0.985 0 0);
-  
-  --primary: var(--theme-primary);
-  --primary-foreground: var(--theme-primary-foreground);
-  
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.13 0.02 260);
+
+  /* Blue Ribbon primary */
+  --primary: oklch(0.50 0.22 264);
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.96 0.01 264);
+  --secondary-foreground: oklch(0.25 0.04 264);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.50 0.02 264);
+  --accent: oklch(0.94 0.02 264);
+  --accent-foreground: oklch(0.25 0.04 264);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: var(--theme-primary);
-  --radius: 0.5rem;
-  
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: var(--theme-primary);
-  --sidebar-primary-foreground: var(--theme-primary-foreground);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: var(--theme-primary);
+  --border: oklch(0.90 0.01 264);
+  --input: oklch(0.92 0.01 264);
+  --ring: oklch(0.50 0.22 264);
+  --radius: 0.625rem;
+
+  --sidebar: oklch(0.99 0 0);
+  --sidebar-foreground: oklch(0.13 0.02 260);
+  --sidebar-primary: oklch(0.50 0.22 264);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.94 0.02 264);
+  --sidebar-accent-foreground: oklch(0.25 0.04 264);
+  --sidebar-border: oklch(0.90 0.01 264);
+  --sidebar-ring: oklch(0.50 0.22 264);
+
+  --chart-1: oklch(0.50 0.22 264);
+  --chart-2: oklch(0.60 0.18 210);
+  --chart-3: oklch(0.55 0.20 310);
+  --chart-4: oklch(0.65 0.16 140);
+  --chart-5: oklch(0.62 0.20 40);
 }
 
+/* ═══════════════════════════════════════════════════
+   BASE TOKENS  — Dark Mode
+═══════════════════════════════════════════════════ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  
-  --primary: var(--theme-primary);
-  --primary-foreground: var(--theme-primary-foreground);
-  
-  --secondary: oklch(0.25 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.25 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.25 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.13 0.02 264);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.17 0.02 264);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.17 0.02 264);
+  --popover-foreground: oklch(0.97 0 0);
+
+  --primary: oklch(0.60 0.22 264);
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.22 0.03 264);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.22 0.02 264);
+  --muted-foreground: oklch(0.65 0.04 264);
+  --accent: oklch(0.22 0.03 264);
+  --accent-foreground: oklch(0.97 0 0);
   --destructive: oklch(0.60 0.20 27.3);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: var(--theme-primary);
-  
-  --sidebar: oklch(0.18 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: var(--theme-primary);
-  --sidebar-primary-foreground: var(--theme-primary-foreground);
-  --sidebar-accent: oklch(0.25 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: var(--theme-primary);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.60 0.22 264);
+
+  --sidebar: oklch(0.17 0.02 264);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-primary: oklch(0.60 0.22 264);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.22 0.03 264);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.60 0.22 264);
+
+  --chart-1: oklch(0.60 0.22 264);
+  --chart-2: oklch(0.65 0.18 210);
+  --chart-3: oklch(0.60 0.20 310);
+  --chart-4: oklch(0.68 0.16 140);
+  --chart-5: oklch(0.66 0.20 40);
 }
 
-/* Palette Overrides */
-.theme-shamrock {
-  --theme-primary: oklch(0.48 0.16 142);
-  --theme-primary-foreground: oklch(0.985 0 0);
+/* ═══════════════════════════════════════════════════
+   PORTAL: LANDLORD
+   Identity: Blue Ribbon — Professional & Trustworthy
+   Sidebar: White/Light with blue-ribbon active states
+═══════════════════════════════════════════════════ */
+.portal-landlord {
+  --portal-sidebar-bg: oklch(1 0 0);
+  --portal-sidebar-fg: oklch(0.25 0.04 264);
+  --portal-sidebar-muted: oklch(0.55 0.03 264);
+  --portal-sidebar-border: oklch(0.90 0.01 264);
+  --portal-sidebar-active-bg: oklch(0.50 0.22 264);
+  --portal-sidebar-active-fg: oklch(1 0 0);
+  --portal-sidebar-hover-bg: oklch(0.94 0.03 264);
+  --portal-sidebar-hover-fg: oklch(0.25 0.04 264);
+  --portal-sidebar-logo-bg: oklch(0.50 0.22 264);
+  --portal-sidebar-logo-fg: oklch(1 0 0);
+  --portal-header-bg: rgba(255,255,255,0.85);
+  --portal-role-badge: oklch(0.50 0.22 264);
+  --portal-role-badge-fg: oklch(1 0 0);
+  --portal-role-label: "Landlord Portal";
 }
 
-.theme-ocean {
-  --theme-primary: oklch(0.55 0.18 240);
-  --theme-primary-foreground: oklch(0.985 0 0);
+.dark .portal-landlord {
+  --portal-sidebar-bg: oklch(0.17 0.02 264);
+  --portal-sidebar-fg: oklch(0.85 0.03 264);
+  --portal-sidebar-muted: oklch(0.55 0.04 264);
+  --portal-sidebar-border: oklch(1 0 0 / 8%);
+  --portal-sidebar-active-bg: oklch(0.60 0.22 264);
+  --portal-sidebar-active-fg: oklch(1 0 0);
+  --portal-sidebar-hover-bg: oklch(0.22 0.04 264);
+  --portal-sidebar-hover-fg: oklch(0.90 0.03 264);
+  --portal-sidebar-logo-bg: oklch(0.60 0.22 264);
+  --portal-sidebar-logo-fg: oklch(1 0 0);
+  --portal-header-bg: rgba(28,30,50,0.85);
 }
 
-.theme-violet {
-  --theme-primary: oklch(0.50 0.20 280);
-  --theme-primary-foreground: oklch(0.985 0 0);
+/* ═══════════════════════════════════════════════════
+   PORTAL: SAAS ADMIN
+   Identity: Deep Violet/Indigo — Authority & Control
+   Sidebar: Dark charcoal-indigo with violet accents
+═══════════════════════════════════════════════════ */
+.portal-admin {
+  --portal-sidebar-bg: oklch(0.16 0.06 280);
+  --portal-sidebar-fg: oklch(0.88 0.03 280);
+  --portal-sidebar-muted: oklch(0.60 0.04 280);
+  --portal-sidebar-border: oklch(1 0 0 / 7%);
+  --portal-sidebar-active-bg: oklch(0.58 0.24 300);
+  --portal-sidebar-active-fg: oklch(1 0 0);
+  --portal-sidebar-hover-bg: oklch(0.22 0.06 280);
+  --portal-sidebar-hover-fg: oklch(0.95 0.02 280);
+  --portal-sidebar-logo-bg: oklch(0.58 0.24 300);
+  --portal-sidebar-logo-fg: oklch(1 0 0);
+  --portal-header-bg: rgba(22,18,50,0.90);
+  --portal-role-badge: oklch(0.58 0.24 300);
+  --portal-role-badge-fg: oklch(1 0 0);
+  --portal-role-label: "Admin Console";
+  --primary: oklch(0.58 0.24 300);
+  --primary-foreground: oklch(1 0 0);
 }
 
-.theme-sunset {
-  --theme-primary: oklch(0.60 0.18 40);
-  --theme-primary-foreground: oklch(0.985 0 0);
+.dark .portal-admin {
+  --portal-sidebar-bg: oklch(0.13 0.06 280);
+  --portal-sidebar-fg: oklch(0.88 0.03 280);
+  --portal-sidebar-muted: oklch(0.55 0.04 280);
+  --portal-sidebar-border: oklch(1 0 0 / 7%);
+  --portal-sidebar-active-bg: oklch(0.62 0.24 300);
+  --portal-sidebar-active-fg: oklch(1 0 0);
+  --portal-sidebar-hover-bg: oklch(0.20 0.06 280);
+  --portal-sidebar-hover-fg: oklch(0.95 0.02 280);
 }
 
-.theme-rose {
-  --theme-primary: oklch(0.55 0.20 350);
-  --theme-primary-foreground: oklch(0.985 0 0);
+/* ═══════════════════════════════════════════════════
+   PORTAL: TENANT
+   Identity: Teal/Cyan — Friendly & Approachable
+   Sidebar: Soft light with teal-green accents
+═══════════════════════════════════════════════════ */
+.portal-tenant {
+  --portal-sidebar-bg: oklch(0.98 0.01 185);
+  --portal-sidebar-fg: oklch(0.22 0.05 200);
+  --portal-sidebar-muted: oklch(0.55 0.04 185);
+  --portal-sidebar-border: oklch(0.88 0.03 185);
+  --portal-sidebar-active-bg: oklch(0.50 0.16 185);
+  --portal-sidebar-active-fg: oklch(1 0 0);
+  --portal-sidebar-hover-bg: oklch(0.92 0.04 185);
+  --portal-sidebar-hover-fg: oklch(0.22 0.05 200);
+  --portal-sidebar-logo-bg: oklch(0.50 0.16 185);
+  --portal-sidebar-logo-fg: oklch(1 0 0);
+  --portal-header-bg: rgba(245,252,252,0.88);
+  --portal-role-badge: oklch(0.50 0.16 185);
+  --portal-role-badge-fg: oklch(1 0 0);
+  --portal-role-label: "Tenant Portal";
+  --primary: oklch(0.50 0.16 185);
+  --primary-foreground: oklch(1 0 0);
 }
 
-.theme-slate {
-  --theme-primary: oklch(0.45 0.05 240);
-  --theme-primary-foreground: oklch(0.985 0 0);
+.dark .portal-tenant {
+  --portal-sidebar-bg: oklch(0.16 0.04 185);
+  --portal-sidebar-fg: oklch(0.88 0.03 185);
+  --portal-sidebar-muted: oklch(0.55 0.04 185);
+  --portal-sidebar-border: oklch(1 0 0 / 8%);
+  --portal-sidebar-active-bg: oklch(0.55 0.16 185);
+  --portal-sidebar-active-fg: oklch(1 0 0);
+  --portal-sidebar-hover-bg: oklch(0.22 0.05 185);
+  --portal-sidebar-hover-fg: oklch(0.90 0.03 185);
+  --primary: oklch(0.55 0.16 185);
 }
 
+/* ═══════════════════════════════════════════════════
+   PORTAL SIDEBAR UTILITY CLASSES
+   (used by DashboardLayout)
+═══════════════════════════════════════════════════ */
+.portal-sidebar {
+  background-color: var(--portal-sidebar-bg);
+  color: var(--portal-sidebar-fg);
+  border-right: 1px solid var(--portal-sidebar-border);
+}
+
+.portal-sidebar-logo {
+  background-color: var(--portal-sidebar-logo-bg);
+  color: var(--portal-sidebar-logo-fg);
+}
+
+.portal-sidebar-nav-item {
+  color: var(--portal-sidebar-muted);
+  transition: all 0.18s ease;
+}
+
+.portal-sidebar-nav-item:hover {
+  background-color: var(--portal-sidebar-hover-bg);
+  color: var(--portal-sidebar-hover-fg);
+}
+
+.portal-sidebar-nav-item.active {
+  background-color: var(--portal-sidebar-active-bg);
+  color: var(--portal-sidebar-active-fg);
+  box-shadow: 0 2px 10px color-mix(in oklch, var(--portal-sidebar-active-bg) 40%, transparent);
+}
+
+.portal-header {
+  background-color: var(--portal-header-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--portal-sidebar-border, var(--border));
+}
+
+.portal-role-badge {
+  background-color: var(--portal-role-badge, var(--primary));
+  color: var(--portal-role-badge-fg, var(--primary-foreground));
+}
 
 @layer base {
   * {
