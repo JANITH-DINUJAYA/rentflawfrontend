@@ -1,131 +1,129 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Search, Mail, Building, UserCheck } from "lucide-react";
+import { Search, Loader2, AlertCircle, Users } from "lucide-react";
+import { api } from "@/lib/api";
 
-interface GlobalTenant {
+interface Tenant {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  landlordName: string;
-  propertyName: string;
-  roomNumber: string;
-  status: "ACTIVE" | "INVITED" | "ENDED";
+  phone: string;
+  created_at: string;
+  rental_agreements?: { status: string }[];
 }
 
-const SAMPLE_GLOBAL_TENANTS: GlobalTenant[] = [
-  { id: "TNT-001", name: "Alice Vance", email: "alice@gmail.com", landlordName: "Greenwood Rentals", propertyName: "Greenwood Residence", roomNumber: "102", status: "ACTIVE" },
-  { id: "TNT-002", name: "Marcus Brody", email: "marcus.brody@univ.edu", landlordName: "Apex Properties Ltd", propertyName: "City Center Hostels", roomNumber: "205", status: "ACTIVE" },
-  { id: "TNT-003", name: "David Miller", email: "david.miller@gmail.com", landlordName: "Greenwood Rentals", propertyName: "Greenwood Residence", roomNumber: "108", status: "INVITED" },
-  { id: "TNT-004", name: "John Smith", email: "john.smith@gmail.com", landlordName: "Greenwood Rentals", propertyName: "Greenwood Residence", roomNumber: "101", status: "ENDED" }
-];
-
 export default function AdminTenantsPage() {
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
-  const filtered = SAMPLE_GLOBAL_TENANTS.filter(t => {
-    return t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           t.landlordName.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const fetchTenants = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.get("/tenants");
+      setTenants(res.data);
+    } catch {
+      setError("Failed to load tenants.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchTenants(); }, []);
+
+  const filtered = tenants.filter(t =>
+    `${t.first_name} ${t.last_name} ${t.email}`.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <DashboardLayout>
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Global Tenants Directory</h2>
-        <p className="text-sm text-muted-foreground">View all tenants registered on the platform across all landlord organizations.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Tenant Accounts</h2>
+          <p className="text-sm text-muted-foreground">All registered tenants across the platform.</p>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-background w-full sm:w-72">
+          <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <input
+            className="text-sm bg-transparent outline-none flex-1 placeholder:text-muted-foreground"
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="relative w-full sm:w-80">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by tenant name, email, or landlord..."
-          className="pl-9"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Email Contact</TableHead>
-                <TableHead>Assigned Landlord</TableHead>
-                <TableHead>Location Room</TableHead>
-                <TableHead>Platform Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((t) => (
-                <TableRow key={t.id} className="hover:bg-accent/20 transition-colors">
-                  <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                        {t.name[0]}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">{t.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono">{t.id}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5" />
-                      {t.email}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs text-foreground font-semibold flex items-center gap-1.5">
-                      <Building className="h-3.5 w-3.5 text-muted-foreground" />
-                      {t.landlordName}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-xs">
-                      <p className="font-medium text-foreground">{t.propertyName}</p>
-                      <p className="text-[10px] text-muted-foreground">Rm {t.roomNumber}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {t.status === "ACTIVE" ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold">
-                        <UserCheck className="mr-1 h-3 w-3" /> Active
-                      </Badge>
-                    ) : t.status === "INVITED" ? (
-                      <Badge className="bg-amber-500/10 text-amber-500 border-none font-bold">
-                        Invited
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-muted text-muted-foreground border-none font-bold">
-                        Ended
-                      </Badge>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <AlertCircle className="h-10 w-10 text-destructive" />
+          <p className="text-sm font-semibold">{error}</p>
+          <button onClick={fetchTenants} className="text-primary hover:underline text-xs">Retry</button>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    No tenants match search query.
-                  </TableCell>
+                  <TableHead>Tenant</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                      {search ? `No tenants matching "${search}"` : "No tenants registered yet."}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map(t => {
+                    const hasActive = t.rental_agreements?.some(a => a.status === "ACTIVE");
+                    return (
+                      <TableRow key={t.id} className="hover:bg-accent/20 transition-colors">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                              {t.first_name?.[0]}{t.last_name?.[0]}
+                            </div>
+                            <span className="font-semibold text-sm">{t.first_name} {t.last_name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{t.email}</TableCell>
+                        <TableCell className="text-sm">{t.phone}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(t.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={hasActive ? "default" : "secondary"} className="text-[10px]">
+                            {hasActive ? "Active Tenant" : "No Active Lease"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </DashboardLayout>
   );
 }

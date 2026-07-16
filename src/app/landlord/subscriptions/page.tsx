@@ -1,247 +1,209 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import {
-  Crown,
-  CheckCircle2,
-  Star,
-  Zap,
-  Building2,
-  Users,
-  FileText,
-  Headphones,
-  ArrowRight
-} from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Crown, Check, Loader2, AlertCircle, ArrowRight, Star, Building2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { api } from "@/lib/api";
 
-interface Plan {
+interface Package {
   id: string;
   name: string;
   price: number;
-  billingCycle: "month" | "year";
-  maxProperties: number;
-  maxTenants: number;
-  maxStaff: number;
-  features: string[];
-  badge?: string;
-  badgeColor?: string;
-  recommended?: boolean;
+  max_properties: number;
+  max_tenants: number;
+  max_staff: number;
 }
 
-const PLANS: Plan[] = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 0,
-    billingCycle: "month",
-    maxProperties: 1,
-    maxTenants: 10,
-    maxStaff: 1,
-    features: ["1 property", "Up to 10 tenants", "1 staff member", "Basic invoicing", "Email support"]
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 29,
-    billingCycle: "month",
-    maxProperties: 5,
-    maxTenants: 100,
-    maxStaff: 5,
-    features: ["5 properties", "Up to 100 tenants", "5 staff members", "Advanced invoicing", "Utility billing", "Reports & analytics", "Priority support"],
-    badge: "Most Popular",
-    badgeColor: "bg-primary text-primary-foreground",
-    recommended: true
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 79,
-    billingCycle: "month",
-    maxProperties: 999,
-    maxTenants: 999,
-    maxStaff: 999,
-    features: ["Unlimited properties", "Unlimited tenants", "Unlimited staff", "Custom roles & permissions", "BullMQ background jobs", "Dedicated support", "API access"],
-    badge: "Best Value",
-    badgeColor: "bg-amber-500 text-black"
-  }
-];
-
-const FEATURE_ICONS: Record<string, React.ElementType> = {
-  "property": Building2,
-  "tenant": Users,
-  "staff": Users,
-  "invoic": FileText,
-  "report": FileText,
-  "support": Headphones,
-  "util": Zap,
-  "role": Crown,
-  "api": Zap,
-  "bull": Zap
-};
-
-function getFeatureIcon(feature: string): React.ElementType {
-  const key = Object.keys(FEATURE_ICONS).find(k => feature.toLowerCase().includes(k));
-  return key ? FEATURE_ICONS[key] : CheckCircle2;
+interface MySubscription {
+  id: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  package: Package;
 }
 
-export default function SubscriptionsPage() {
-  const [activePlan] = React.useState<string>("starter");
-  const [billingAnnually, setBillingAnnually] = React.useState(false);
+const ICONS = [Star, Crown, Building2];
+const BG = ["bg-blue-500/10", "bg-yellow-500/10", "bg-purple-500/10"];
+const TEXT = ["text-blue-500", "text-yellow-500", "text-purple-500"];
+
+export default function LandlordSubscriptionsPage() {
+  const [mySubscription, setMySubscription] = useState<MySubscription | null>(null);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [upgradeTarget, setUpgradeTarget] = useState<Package | null>(null);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState("");
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [subRes, pkgRes] = await Promise.all([
+        api.get("/subscriptions/my-subscription").catch(() => ({ data: null })),
+        api.get("/subscriptions/packages"),
+      ]);
+      setMySubscription(subRes.data);
+      setPackages(pkgRes.data);
+    } catch {
+      setError("Failed to load subscription information.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const handleUpgrade = async () => {
+    if (!upgradeTarget) return;
+    setUpgrading(true);
+    setUpgradeError("");
+    try {
+      await api.post("/subscriptions/upgrade", { packageId: upgradeTarget.id });
+      setUpgradeTarget(null);
+      await fetchData();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setUpgradeError(Array.isArray(msg) ? msg[0] : msg || "Failed to upgrade subscription.");
+    } finally {
+      setUpgrading(false);
+    }
+  };
 
   return (
     <DashboardLayout>
-      {/* Header */}
-      <div className="text-center space-y-3 py-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest border border-primary/20">
-          <Crown className="h-3.5 w-3.5" /> Subscription Plans
-        </div>
-        <h2 className="text-3xl font-black tracking-tight">Choose your plan</h2>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Unlock more properties, tenants, and powerful features as your portfolio grows.
-        </p>
-
-        {/* Toggle billing */}
-        <div className="inline-flex items-center gap-3 bg-card border border-border rounded-full p-1.5 mt-2">
-          <button
-            onClick={() => setBillingAnnually(false)}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${!billingAnnually ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setBillingAnnually(true)}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${billingAnnually ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Annual <span className="ml-1 text-[10px] text-emerald-400 font-black">-20%</span>
-          </button>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Subscription & Billing</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage your SaaS plan and upgrade when you need more capacity.</p>
       </div>
 
-      {/* Plans grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-        {PLANS.map(plan => {
-          const isActive = plan.id === activePlan;
-          const displayPrice = billingAnnually && plan.price > 0
-            ? (plan.price * 0.8).toFixed(0)
-            : plan.price;
-
-          return (
-            <Card
-              key={plan.id}
-              className={`relative overflow-hidden transition-all duration-300 ${plan.recommended
-                ? "border-primary shadow-xl shadow-primary/10 scale-105 ring-2 ring-primary/30"
-                : "hover:shadow-lg hover:border-primary/30"
-              } ${isActive ? "ring-2 ring-emerald-500/40 border-emerald-500/30" : ""}`}
-            >
-              {/* Active indicator */}
-              {isActive && (
-                <div className="absolute top-3 right-3">
-                  <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold text-[10px]">
-                    <CheckCircle2 className="mr-1 h-3 w-3" /> Current Plan
-                  </Badge>
-                </div>
-              )}
-
-              {/* Popular badge */}
-              {plan.badge && !isActive && (
-                <div className="absolute top-3 right-3">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${plan.badgeColor}`}>
-                    {plan.badge}
-                  </span>
-                </div>
-              )}
-
-              <CardContent className="p-6 space-y-5">
-                {/* Plan name */}
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Star className={`h-4 w-4 ${plan.recommended ? "text-primary" : "text-muted-foreground"}`} />
-                    <p className="font-black text-lg">{plan.name}</p>
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : error ? (
+        <div className="flex flex-col items-center py-20 gap-3">
+          <AlertCircle className="h-9 w-9 text-destructive" />
+          <p className="text-sm">{error}</p>
+          <button onClick={fetchData} className="text-primary hover:underline text-xs">Retry</button>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {/* Current Plan */}
+          {mySubscription && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-primary uppercase tracking-widest">Current Plan</p>
+                    <CardTitle className="text-2xl font-extrabold mt-1">{mySubscription.package.name}</CardTitle>
                   </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black">${displayPrice}</span>
-                    <span className="text-sm text-muted-foreground">/{billingAnnually ? "mo, billed yearly" : "month"}</span>
-                  </div>
+                  <Badge variant="default" className="text-xs">{mySubscription.status}</Badge>
                 </div>
-
-                {/* Limits */}
-                <div className="grid grid-cols-3 gap-2">
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-3 gap-3 text-center bg-background rounded-xl p-3">
                   {[
-                    { Icon: Building2, label: "Props", value: plan.maxProperties >= 999 ? "∞" : plan.maxProperties },
-                    { Icon: Users, label: "Tenants", value: plan.maxTenants >= 999 ? "∞" : plan.maxTenants },
-                    { Icon: Users, label: "Staff", value: plan.maxStaff >= 999 ? "∞" : plan.maxStaff }
-                  ].map(({ Icon, label, value }) => (
-                    <div key={label} className="flex flex-col items-center gap-1 p-2 rounded-xl bg-accent/20 border border-border text-center">
-                      <Icon className="h-4 w-4 text-primary" />
-                      <p className="font-black text-sm">{value}</p>
-                      <p className="text-[9px] text-muted-foreground">{label}</p>
+                    { label: "Properties", val: mySubscription.package.max_properties >= 999 ? "∞" : mySubscription.package.max_properties },
+                    { label: "Tenants", val: mySubscription.package.max_tenants >= 999 ? "∞" : mySubscription.package.max_tenants },
+                    { label: "Staff", val: mySubscription.package.max_staff >= 999 ? "∞" : mySubscription.package.max_staff },
+                  ].map(({ label, val }) => (
+                    <div key={label}>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">{label}</p>
+                      <p className="text-xl font-extrabold">{val}</p>
                     </div>
                   ))}
                 </div>
-
-                {/* Features */}
-                <ul className="space-y-2">
-                  {plan.features.map(f => {
-                    const Icon = getFeatureIcon(f);
-                    return (
-                      <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Icon className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                        {f}
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                {/* CTA */}
-                {isActive ? (
-                  <div className="w-full py-2.5 text-center text-sm font-bold rounded-xl bg-emerald-600/10 text-emerald-500 border border-emerald-500/20">
-                    Active Plan
-                  </div>
-                ) : (
-                  <button className={`w-full py-2.5 text-sm font-bold rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 ${plan.recommended
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
-                    : "bg-card border border-border text-foreground hover:bg-accent/50"
-                  }`}>
-                    Upgrade to {plan.name} <ArrowRight className="h-4 w-4" />
-                  </button>
-                )}
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  <span>Started: {new Date(mySubscription.start_date).toLocaleDateString()}</span>
+                  <span>Renews: {new Date(mySubscription.end_date).toLocaleDateString()}</span>
+                </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          )}
 
-      {/* Usage summary */}
-      <Card className="mt-2">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-sm mb-4">Current Usage — Starter Plan</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {[
-              { label: "Properties", used: 1, max: 1, color: "bg-amber-500" },
-              { label: "Tenants", used: 8, max: 10, color: "bg-emerald-500" },
-              { label: "Staff Members", used: 1, max: 1, color: "bg-amber-500" }
-            ].map(u => {
-              const pct = (u.used / u.max) * 100;
-              return (
-                <div key={u.label} className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="font-semibold">{u.label}</span>
-                    <span className="text-muted-foreground">{u.used} / {u.max}</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted/40">
-                    <div className={`h-full rounded-full ${u.color} transition-all duration-700`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    {pct >= 100 ? <span className="text-destructive font-bold">Limit reached — upgrade to add more</span> : `${u.max - u.used} remaining`}
-                  </p>
-                </div>
-              );
-            })}
+          {!mySubscription && (
+            <div className="p-6 rounded-xl border-2 border-dashed border-border text-center space-y-2">
+              <Crown className="h-10 w-10 text-muted-foreground mx-auto" />
+              <p className="font-semibold">No active subscription</p>
+              <p className="text-sm text-muted-foreground">Choose a plan below to activate your account.</p>
+            </div>
+          )}
+
+          {/* Available Plans */}
+          <div>
+            <h3 className="text-lg font-bold mb-4">Available Plans</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {packages.map((pkg, i) => {
+                const Icon = ICONS[i % ICONS.length];
+                const isCurrentPlan = mySubscription?.package.id === pkg.id;
+                return (
+                  <Card key={pkg.id} className={`relative overflow-hidden transition-all ${isCurrentPlan ? "border-primary ring-1 ring-primary/30" : "hover:shadow-lg"}`}>
+                    <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
+                    <CardHeader className="pb-3">
+                      <div className={`h-11 w-11 rounded-xl ${BG[i % BG.length]} ${TEXT[i % TEXT.length]} flex items-center justify-center`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg font-extrabold mt-3">{pkg.name}</CardTitle>
+                      <p className="text-2xl font-black">
+                        {pkg.price === 0 ? "Free" : `$${pkg.price}`}
+                        {pkg.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ul className="space-y-1.5">
+                        {[
+                          `${pkg.max_properties >= 999 ? "Unlimited" : `Up to ${pkg.max_properties}`} properties`,
+                          `${pkg.max_tenants >= 999 ? "Unlimited" : `Up to ${pkg.max_tenants}`} tenants`,
+                          `${pkg.max_staff >= 999 ? "Unlimited" : `Up to ${pkg.max_staff}`} staff members`,
+                        ].map(f => (
+                          <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> {f}
+                          </li>
+                        ))}
+                      </ul>
+                      {isCurrentPlan ? (
+                        <div className="w-full py-2 text-center text-xs font-bold text-primary bg-primary/10 rounded-lg">
+                          ✓ Current Plan
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setUpgradeTarget(pkg)}
+                          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
+                        >
+                          {mySubscription ? "Switch to This Plan" : "Subscribe"} <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      {/* Upgrade Confirmation Dialog */}
+      <Dialog open={upgradeTarget !== null} onOpenChange={o => !o && setUpgradeTarget(null)}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Plan Change</DialogTitle>
+            <DialogDescription>
+              You are switching to the <strong>{upgradeTarget?.name}</strong> plan
+              {upgradeTarget?.price === 0 ? " (Free)" : ` ($${upgradeTarget?.price}/month)`}.
+            </DialogDescription>
+          </DialogHeader>
+          {upgradeError && <p className="text-xs text-destructive font-medium">{upgradeError}</p>}
+          <DialogFooter>
+            <button onClick={() => setUpgradeTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
+            <button onClick={handleUpgrade} disabled={upgrading} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+              {upgrading && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirm
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

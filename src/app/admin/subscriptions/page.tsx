@@ -1,182 +1,214 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Star, Building2, Users, ArrowRight, Settings, CheckCircle2 } from "lucide-react";
+import { Crown, Star, Building2, Users, Plus, Loader2, AlertCircle, Check, Pencil, Trash2 } from "lucide-react";
+import { api } from "@/lib/api";
 
-interface SaaSPlan {
+interface Package {
   id: string;
   name: string;
   price: number;
-  maxProperties: number;
-  maxTenants: number;
-  maxStaff: number;
-  features: string[];
+  max_properties: number;
+  max_tenants: number;
+  max_staff: number;
+  is_active: boolean;
 }
 
-const INITIAL_PLANS: SaaSPlan[] = [
-  { id: "starter", name: "Starter", price: 0, maxProperties: 1, maxTenants: 10, maxStaff: 1, features: ["1 property", "Up to 10 tenants", "1 staff member", "Basic invoicing", "Email support"] },
-  { id: "pro", name: "Pro", price: 29, maxProperties: 5, maxTenants: 100, maxStaff: 5, features: ["5 properties", "Up to 100 tenants", "5 staff members", "Advanced invoicing", "Utility billing", "Reports & analytics", "Priority support"] },
-  { id: "enterprise", name: "Enterprise", price: 79, maxProperties: 999, maxTenants: 999, maxStaff: 999, features: ["Unlimited properties", "Unlimited tenants", "Unlimited staff", "Custom roles & permissions", "BullMQ background jobs", "Dedicated support", "API access"] }
-];
+const ICONS = [Star, Crown, Building2];
+const COLORS = ["text-blue-500", "text-yellow-500", "text-purple-500"];
+const BG = ["bg-blue-500/10", "bg-yellow-500/10", "bg-purple-500/10"];
+
+const emptyForm = { name: "", price: "", max_properties: "", max_tenants: "", max_staff: "" };
 
 export default function AdminSubscriptionsPage() {
-  const [plans, setPlans] = React.useState<SaaSPlan[]>(INITIAL_PLANS);
-  const [editingPlan, setEditingPlan] = React.useState<SaaSPlan | null>(null);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Edit Form State
-  const [form, setForm] = React.useState({
-    price: "",
-    maxProperties: "",
-    maxTenants: "",
-    maxStaff: ""
-  });
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
 
-  const handleSave = () => {
-    if (!editingPlan) return;
-    setPlans(plans.map(p => 
-      p.id === editingPlan.id
-        ? {
-            ...p,
-            price: parseFloat(form.price) || 0,
-            maxProperties: parseInt(form.maxProperties) || 0,
-            maxTenants: parseInt(form.maxTenants) || 0,
-            maxStaff: parseInt(form.maxStaff) || 0
-          }
-        : p
-    ));
-    setEditingPlan(null);
+  const fetchPackages = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/subscriptions/packages");
+      setPackages(res.data);
+    } catch {
+      setError("Failed to load subscription packages.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchPackages(); }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    if (!form.name.trim() || !form.price || !form.max_properties || !form.max_tenants || !form.max_staff) {
+      setFormError("All fields are required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post("/subscriptions/packages", {
+        name: form.name.trim(),
+        price: parseFloat(form.price),
+        max_properties: parseInt(form.max_properties),
+        max_tenants: parseInt(form.max_tenants),
+        max_staff: parseInt(form.max_staff),
+      });
+      setShowCreate(false);
+      setForm(emptyForm);
+      await fetchPackages();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setFormError(Array.isArray(msg) ? msg[0] : msg || "Failed to create package.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <DashboardLayout>
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">SaaS Subscription Packages</h2>
-        <p className="text-sm text-muted-foreground">Adjust limits, features, and billing rates for all rental platform subscription levels.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Subscription Packages</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage SaaS plans available to landlords.</p>
+        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+        >
+          <Plus className="h-4 w-4" /> New Package
+        </button>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {plans.map(plan => (
-          <Card key={plan.id} className="relative overflow-hidden border border-border bg-card">
-            <CardContent className="p-6 space-y-5">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Star className="h-4 w-4 text-primary" />
-                  <p className="font-black text-lg">{plan.name}</p>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black">${plan.price}</span>
-                  <span className="text-sm text-muted-foreground">/month</span>
-                </div>
-              </div>
-
-              {/* Limit badges */}
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { Icon: Building2, label: "Props Limit", value: plan.maxProperties >= 999 ? "∞" : plan.maxProperties },
-                  { Icon: Users, label: "Tenants Limit", value: plan.maxTenants >= 999 ? "∞" : plan.maxTenants },
-                  { Icon: Users, label: "Staff Limit", value: plan.maxStaff >= 999 ? "∞" : plan.maxStaff }
-                ].map(({ Icon, label, value }) => (
-                  <div key={label} className="flex flex-col items-center gap-1 p-2 rounded-xl bg-accent/20 border border-border text-center">
-                    <Icon className="h-4 w-4 text-primary" />
-                    <p className="font-black text-sm">{value}</p>
-                    <p className="text-[9px] text-muted-foreground">{label}</p>
+      {/* Content */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+          <AlertCircle className="h-10 w-10 text-destructive" />
+          <p className="text-sm font-semibold">{error}</p>
+          <button onClick={fetchPackages} className="text-primary hover:underline text-xs">Retry</button>
+        </div>
+      ) : packages.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
+          <Crown className="h-10 w-10 text-muted-foreground" />
+          <p className="font-semibold">No packages yet</p>
+          <p className="text-sm text-muted-foreground">Create your first subscription package to get started.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {packages.map((pkg, i) => {
+            const Icon = ICONS[i % ICONS.length];
+            const color = COLORS[i % COLORS.length];
+            const bg = BG[i % BG.length];
+            return (
+              <Card key={pkg.id} className="relative overflow-hidden hover:shadow-lg transition-all duration-300">
+                <div className="absolute top-0 left-0 w-full h-1" style={{ background: "var(--primary)" }} />
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className={`h-12 w-12 rounded-2xl ${bg} ${color} flex items-center justify-center`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <Badge variant={pkg.is_active ? "default" : "secondary"} className="text-[10px]">
+                      {pkg.is_active ? "Active" : "Inactive"}
+                    </Badge>
                   </div>
-                ))}
-              </div>
+                  <CardTitle className="text-xl font-extrabold mt-3">{pkg.name}</CardTitle>
+                  <p className="text-3xl font-black mt-1">
+                    {pkg.price === 0 ? "Free" : `$${pkg.price}`}
+                    {pkg.price > 0 && <span className="text-sm font-normal text-muted-foreground">/month</span>}
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2 text-center bg-accent/20 rounded-xl p-3">
+                    {[
+                      { label: "Properties", val: pkg.max_properties >= 999 ? "∞" : pkg.max_properties },
+                      { label: "Tenants", val: pkg.max_tenants >= 999 ? "∞" : pkg.max_tenants },
+                      { label: "Staff", val: pkg.max_staff >= 999 ? "∞" : pkg.max_staff },
+                    ].map(({ label, val }) => (
+                      <div key={label}>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">{label}</p>
+                        <p className="text-lg font-extrabold">{val}</p>
+                      </div>
+                    ))}
+                  </div>
 
-              {/* Features list */}
-              <ul className="space-y-2 border-t border-border pt-4">
-                {plan.features.map(f => (
-                  <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
+                  <ul className="space-y-1.5">
+                    {[
+                      `Up to ${pkg.max_properties >= 999 ? "unlimited" : pkg.max_properties} properties`,
+                      `Up to ${pkg.max_tenants >= 999 ? "unlimited" : pkg.max_tenants} tenants`,
+                      `Up to ${pkg.max_staff >= 999 ? "unlimited" : pkg.max_staff} staff members`,
+                    ].map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Edit button */}
-              <button
-                onClick={() => {
-                  setEditingPlan(plan);
-                  setForm({
-                    price: plan.price.toString(),
-                    maxProperties: plan.maxProperties.toString(),
-                    maxTenants: plan.maxTenants.toString(),
-                    maxStaff: plan.maxStaff.toString()
-                  });
-                }}
-                className="w-full py-2 text-xs font-bold rounded-xl bg-card border border-border text-foreground hover:bg-accent/40 transition-all flex items-center justify-center gap-1.5"
-              >
-                <Settings className="h-3.5 w-3.5" /> Adjust Limits & Price
-              </button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Adjust Limits Dialog */}
-      <Dialog open={editingPlan !== null} onOpenChange={open => !open && setEditingPlan(null)}>
-        <DialogContent className="sm:max-w-[420px]">
+      {/* Create Package Dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
-            <DialogTitle>Configure Pricing Plan</DialogTitle>
-            <DialogDescription>Alter subscription parameters. Changes will apply immediately to landlords on this plan.</DialogDescription>
+            <DialogTitle>Create Subscription Package</DialogTitle>
+            <DialogDescription>Define a new SaaS tier for landlords to subscribe to.</DialogDescription>
           </DialogHeader>
-          {editingPlan && (
-            <div className="space-y-4 py-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="planPrice">Monthly Subscription Price ($)</Label>
-                <Input
-                  id="planPrice"
-                  type="number"
-                  value={form.price}
-                  onChange={e => setForm({ ...form, price: e.target.value })}
-                />
+          <form onSubmit={handleCreate} className="space-y-4 pt-2">
+            {formError && (
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4" /> {formError}
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="maxProps">Max Properties</Label>
-                  <Input
-                    id="maxProps"
-                    type="number"
-                    value={form.maxProperties}
-                    onChange={e => setForm({ ...form, maxProperties: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="maxTenants">Max Tenants</Label>
-                  <Input
-                    id="maxTenants"
-                    type="number"
-                    value={form.maxTenants}
-                    onChange={e => setForm({ ...form, maxTenants: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="maxStaff">Max Staff</Label>
-                  <Input
-                    id="maxStaff"
-                    type="number"
-                    value={form.maxStaff}
-                    onChange={e => setForm({ ...form, maxStaff: e.target.value })}
-                  />
-                </div>
-              </div>
-              <button
-                onClick={handleSave}
-                className="w-full py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
-              >
-                Apply Parameters
-              </button>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="pkg-name">Package Name</Label>
+              <Input id="pkg-name" placeholder="e.g. Starter, Pro, Enterprise" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-price">Monthly Price ($)</Label>
+                <Input id="pkg-price" type="number" min="0" step="0.01" placeholder="0" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-props">Max Properties</Label>
+                <Input id="pkg-props" type="number" min="1" placeholder="5" value={form.max_properties} onChange={e => setForm({ ...form, max_properties: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-tenants">Max Tenants</Label>
+                <Input id="pkg-tenants" type="number" min="1" placeholder="100" value={form.max_tenants} onChange={e => setForm({ ...form, max_tenants: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-staff">Max Staff</Label>
+                <Input id="pkg-staff" type="number" min="0" placeholder="5" value={form.max_staff} onChange={e => setForm({ ...form, max_staff: e.target.value })} />
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer">Cancel</button>
+              <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Create Package
+              </button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

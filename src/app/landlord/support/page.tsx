@@ -1,88 +1,91 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import {
-  LifeBuoy, Search, PlusCircle, AlertTriangle, Clock, CheckCircle2, XCircle, MessageSquare, ChevronRight
-} from "lucide-react";
+import { HelpCircle, Loader2, AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { api } from "@/lib/api";
 
-type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+type TicketStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED";
 type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
-interface SupportTicket {
+interface Ticket {
   id: string;
-  tenantName: string;
-  propertyName: string;
-  roomNumber: string;
   category: string;
   description: string;
   priority: TicketPriority;
   status: TicketStatus;
-  createdAt: string;
-  resolvedAt?: string;
+  created_at: string;
+  resolved_at: string | null;
+  tenant: { first_name: string; last_name: string; email: string };
 }
 
-const STATUS_META: Record<TicketStatus, { label: string; icon: React.ElementType; color: string }> = {
-  OPEN: { label: "Open", icon: Clock, color: "text-amber-500 bg-amber-500/10" },
-  IN_PROGRESS: { label: "In Progress", icon: AlertTriangle, color: "text-sky-500 bg-sky-500/10" },
-  RESOLVED: { label: "Resolved", icon: CheckCircle2, color: "text-emerald-500 bg-emerald-500/10" },
-  CLOSED: { label: "Closed", icon: XCircle, color: "text-muted-foreground bg-muted/30" }
+const statusStyles: Record<TicketStatus, string> = {
+  OPEN: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+  IN_PROGRESS: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  COMPLETED: "bg-green-500/10 text-green-600 border-green-500/20",
 };
 
-const PRIORITY_COLOR: Record<TicketPriority, string> = {
-  LOW: "text-muted-foreground bg-muted/30",
-  MEDIUM: "text-sky-500 bg-sky-500/10",
-  HIGH: "text-orange-500 bg-orange-500/10",
-  URGENT: "text-destructive bg-destructive/10"
+const priorityStyles: Record<TicketPriority, string> = {
+  LOW: "bg-gray-500/10 text-gray-500",
+  MEDIUM: "bg-yellow-500/10 text-yellow-600",
+  HIGH: "bg-orange-500/10 text-orange-600",
+  URGENT: "bg-red-500/10 text-red-600",
 };
 
-const SAMPLE_TICKETS: SupportTicket[] = [
-  { id: "TKT-001", tenantName: "Alice Vance", propertyName: "Greenwood Residence", roomNumber: "102", category: "Plumbing", description: "The bathroom tap has been dripping non-stop for 3 days now. Water is pooling on the floor.", priority: "HIGH", status: "OPEN", createdAt: "2026-07-14" },
-  { id: "TKT-002", tenantName: "Marcus Brody", propertyName: "City Center Hostels", roomNumber: "205", category: "Electricity", description: "Power socket near the bed stopped working. Cannot charge my laptop for work.", priority: "URGENT", status: "IN_PROGRESS", createdAt: "2026-07-12" },
-  { id: "TKT-003", tenantName: "Clara Oswald", propertyName: "Greenwood Residence", roomNumber: "108", category: "Noise Complaint", description: "Neighbours on the upper floor are extremely loud every night after midnight.", priority: "MEDIUM", status: "RESOLVED", createdAt: "2026-07-05", resolvedAt: "2026-07-10" },
-  { id: "TKT-004", tenantName: "John Smith", propertyName: "Greenwood Residence", roomNumber: "101", category: "General Inquiry", description: "Asking about the process for renewing the lease next month.", priority: "LOW", status: "CLOSED", createdAt: "2026-07-01" }
-];
+export default function LandlordSupportPage() {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-export default function SupportPage() {
-  const [tickets, setTickets] = React.useState<SupportTicket[]>(SAMPLE_TICKETS);
-  const [search, setSearch] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
-  const [selectedTicket, setSelectedTicket] = React.useState<SupportTicket | null>(null);
-  const [showCreate, setShowCreate] = React.useState(false);
-  const [form, setForm] = React.useState({ category: "", description: "", priority: "MEDIUM" as TicketPriority });
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [statusDialogTicket, setStatusDialogTicket] = useState<Ticket | null>(null);
+  const [newStatus, setNewStatus] = useState<TicketStatus>("OPEN");
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
-  const filtered = tickets.filter(t => {
-    const matchStatus = statusFilter === "ALL" || t.status === statusFilter;
-    const matchSearch = t.tenantName.toLowerCase().includes(search.toLowerCase()) ||
-      t.category.toLowerCase().includes(search.toLowerCase()) ||
-      t.id.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
-
-  const updateStatus = (id: string, status: TicketStatus) => {
-    setTickets(tickets.map(t => t.id === id ? { ...t, status, resolvedAt: status === "RESOLVED" ? new Date().toISOString().slice(0, 10) : t.resolvedAt } : t));
-    setSelectedTicket(prev => prev?.id === id ? { ...prev, status } : prev);
+  const fetchTickets = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.get("/support");
+      setTickets(res.data);
+    } catch {
+      setError("Failed to load support tickets.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCreate = () => {
-    const newTicket: SupportTicket = {
-      id: `TKT-${String(tickets.length + 1).padStart(3, "0")}`,
-      tenantName: "Self (Landlord)",
-      propertyName: "—", roomNumber: "—",
-      category: form.category, description: form.description,
-      priority: form.priority, status: "OPEN",
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    setTickets([newTicket, ...tickets]);
-    setShowCreate(false);
-    setForm({ category: "", description: "", priority: "MEDIUM" });
+  useEffect(() => { fetchTickets(); }, []);
+
+  const openStatusDialog = (ticket: Ticket) => {
+    setStatusDialogTicket(ticket);
+    setNewStatus(ticket.status);
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!statusDialogTicket) return;
+    setStatusUpdating(true);
+    try {
+      await api.patch(`/support/${statusDialogTicket.id}/status`, { status: newStatus });
+      setStatusDialogTicket(null);
+      await fetchTickets();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      alert(Array.isArray(msg) ? msg[0] : msg || "Failed to update status.");
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const summaryStats = {
+    open: tickets.filter(t => t.status === "OPEN").length,
+    inProgress: tickets.filter(t => t.status === "IN_PROGRESS").length,
+    completed: tickets.filter(t => t.status === "COMPLETED").length,
   };
 
   return (
@@ -90,198 +93,132 @@ export default function SupportPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Support Tickets</h2>
-          <p className="text-sm text-muted-foreground">View and manage maintenance and support requests from your tenants.</p>
+          <h2 className="text-2xl font-bold tracking-tight">Tenant Support Tickets</h2>
+          <p className="text-sm text-muted-foreground">Manage and resolve maintenance requests from your tenants.</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all duration-200 active:scale-95"
-        >
-          <PlusCircle className="h-4 w-4" /> New Ticket
+        <button onClick={fetchTickets} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-semibold hover:bg-accent/50 transition-colors cursor-pointer">
+          <RefreshCw className="h-4 w-4" /> Refresh
         </button>
       </div>
 
-      {/* Status summary chips */}
-      <div className="flex flex-wrap gap-2">
-        {(["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const).map(s => {
-          const count = s === "ALL" ? tickets.length : tickets.filter(t => t.status === s).length;
-          const isActive = statusFilter === s;
-          return (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${isActive ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-card border-border text-muted-foreground hover:bg-accent/40"}`}
-            >
-              {s === "ALL" ? "All" : STATUS_META[s as TicketStatus].label} ({count})
-            </button>
-          );
-        })}
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Open", count: summaryStats.open, icon: Clock, color: "text-yellow-500", bg: "bg-yellow-500/10" },
+          { label: "In Progress", count: summaryStats.inProgress, icon: RefreshCw, color: "text-blue-500", bg: "bg-blue-500/10" },
+          { label: "Completed", count: summaryStats.completed, icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10" },
+        ].map(({ label, count, icon: Icon, color, bg }) => (
+          <Card key={label}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`h-10 w-10 rounded-xl ${bg} ${color} flex items-center justify-center flex-shrink-0`}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-extrabold">{count}</p>
+                <p className="text-xs text-muted-foreground">{label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Search */}
-      <div className="relative w-full sm:w-80">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search by tenant, category, ID..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
+      {/* Table */}
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <AlertCircle className="h-9 w-9 text-destructive" />
+          <p className="text-sm">{error}</p>
+          <button onClick={fetchTickets} className="text-primary hover:underline text-xs">Retry</button>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tenant</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tickets.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
+                      No support tickets yet from your tenants.
+                    </TableCell>
+                  </TableRow>
+                ) : tickets.map(ticket => (
+                  <TableRow key={ticket.id} className="hover:bg-accent/20 transition-colors">
+                    <TableCell>
+                      <div>
+                        <p className="font-semibold text-sm">{ticket.tenant.first_name} {ticket.tenant.last_name}</p>
+                        <p className="text-xs text-muted-foreground">{ticket.tenant.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm font-medium">{ticket.category}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{ticket.description}</TableCell>
+                    <TableCell>
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${priorityStyles[ticket.priority]}`}>
+                        {ticket.priority}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${statusStyles[ticket.status]}`}>
+                        {ticket.status.replace("_", " ")}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(ticket.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <button
+                        onClick={() => openStatusDialog(ticket)}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-primary/20 text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                      >
+                        Update Status
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Ticket Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map(t => {
-          const statusMeta = STATUS_META[t.status];
-          const SIcon = statusMeta.icon;
-          return (
-            <Card
-              key={t.id}
-              onClick={() => setSelectedTicket(t)}
-              className="relative overflow-hidden cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-200 group"
-            >
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-mono text-xs text-muted-foreground">{t.id}</p>
-                    <p className="font-bold text-sm leading-snug">{t.category}</p>
-                  </div>
-                  <Badge variant="outline" className={`${PRIORITY_COLOR[t.priority]} border-none font-bold text-[10px]`}>
-                    {t.priority}
-                  </Badge>
-                </div>
-
-                <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <div className="h-6 w-6 rounded-md bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] flex-shrink-0">
-                    {t.tenantName[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold truncate">{t.tenantName}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{t.propertyName} · Rm {t.roomNumber}</p>
-                  </div>
-                  <Badge variant="outline" className={`${statusMeta.color} border-none font-bold text-[10px] flex items-center gap-1`}>
-                    <SIcon className="h-3 w-3" /> {statusMeta.label}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t border-border pt-2 mt-1">
-                  <span>Created {t.createdAt}</span>
-                  <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <LifeBuoy className="h-10 w-10 mb-3 opacity-30" />
-            <p className="text-sm">No tickets found.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Ticket Detail Dialog */}
-      <Dialog open={selectedTicket !== null} onOpenChange={open => !open && setSelectedTicket(null)}>
-        <DialogContent className="sm:max-w-[520px]">
+      {/* Status Update Dialog */}
+      <Dialog open={statusDialogTicket !== null} onOpenChange={o => !o && setStatusDialogTicket(null)}>
+        <DialogContent className="sm:max-w-[380px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              Ticket {selectedTicket?.id}
-            </DialogTitle>
-            <DialogDescription>{selectedTicket?.category} — reported by {selectedTicket?.tenantName}</DialogDescription>
+            <DialogTitle>Update Ticket Status</DialogTitle>
+            <DialogDescription>
+              {statusDialogTicket && `Ticket from ${statusDialogTicket.tenant.first_name} — "${statusDialogTicket.category}"`}
+            </DialogDescription>
           </DialogHeader>
-          {selectedTicket && (
-            <div className="space-y-4 py-2">
-              <div className="flex gap-2">
-                <Badge variant="outline" className={`${PRIORITY_COLOR[selectedTicket.priority]} border-none font-bold`}>
-                  {selectedTicket.priority} Priority
-                </Badge>
-                <Badge variant="outline" className={`${STATUS_META[selectedTicket.status].color} border-none font-bold flex items-center gap-1`}>
-                  {React.createElement(STATUS_META[selectedTicket.status].icon, { className: "h-3 w-3" })}
-                  {STATUS_META[selectedTicket.status].label}
-                </Badge>
-              </div>
-
-              <div className="p-4 rounded-xl bg-accent/20 border border-border text-sm text-muted-foreground leading-relaxed">
-                {selectedTicket.description}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Property</p>
-                  <p className="font-semibold">{selectedTicket.propertyName}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Room</p>
-                  <p className="font-semibold">Rm {selectedTicket.roomNumber}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Created</p>
-                  <p className="font-semibold">{selectedTicket.createdAt}</p>
-                </div>
-                {selectedTicket.resolvedAt && (
-                  <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Resolved</p>
-                    <p className="font-semibold">{selectedTicket.resolvedAt}</p>
-                  </div>
-                )}
-              </div>
-
-              {selectedTicket.status !== "CLOSED" && selectedTicket.status !== "RESOLVED" && (
-                <div className="flex gap-2 pt-2 border-t border-border">
-                  {selectedTicket.status === "OPEN" && (
-                    <button onClick={() => updateStatus(selectedTicket.id, "IN_PROGRESS")}
-                      className="flex-1 py-2 text-xs font-bold rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-all">
-                      Mark In Progress
-                    </button>
-                  )}
-                  <button onClick={() => updateStatus(selectedTicket.id, "RESOLVED")}
-                    className="flex-1 py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all">
-                    Mark Resolved
-                  </button>
-                  <button onClick={() => updateStatus(selectedTicket.id, "CLOSED")}
-                    className="flex-1 py-2 text-xs font-bold rounded-lg bg-card border border-border text-foreground hover:bg-accent/40 transition-all">
-                    Close
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Ticket Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle>Create Support Ticket</DialogTitle>
-            <DialogDescription>Submit a new issue or maintenance request.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="category">Category</Label>
-                <Input id="category" placeholder="e.g. Plumbing" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="priority">Priority</Label>
-                <Select value={form.priority} onValueChange={v => v !== null && setForm({ ...form, priority: v as TicketPriority })}>
-                  <SelectTrigger id="priority"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LOW">Low</SelectItem>
-                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                    <SelectItem value="HIGH">High</SelectItem>
-                    <SelectItem value="URGENT">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" rows={4} placeholder="Describe the issue in detail..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-            </div>
-            <button onClick={handleCreate} disabled={!form.category || !form.description}
-              className="w-full py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-              Submit Ticket
-            </button>
+          <div className="py-3 space-y-3">
+            <Select value={newStatus} onValueChange={v => { if (v) setNewStatus(v as TicketStatus); }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="OPEN">Open</SelectItem>
+                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          <DialogFooter>
+            <button onClick={() => setStatusDialogTicket(null)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
+            <button onClick={handleStatusUpdate} disabled={statusUpdating} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+              {statusUpdating && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save Status
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

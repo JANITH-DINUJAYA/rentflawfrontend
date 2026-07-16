@@ -2,53 +2,53 @@
 
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import {
-  LifeBuoy, PlusCircle, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight, Loader2, AlertCircle
-} from "lucide-react";
+import { HelpCircle, Plus, Loader2, AlertCircle, Clock, CheckCircle2, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 
-type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+type TicketStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED";
 type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
-interface SupportTicket {
+interface Ticket {
   id: string;
   category: string;
   description: string;
   priority: TicketPriority;
   status: TicketStatus;
   created_at: string;
-  resolved_at?: string;
+  resolved_at: string | null;
 }
 
-const STATUS_META: Record<TicketStatus, { label: string; icon: React.ElementType; color: string }> = {
-  OPEN: { label: "Open", icon: Clock, color: "text-amber-500 bg-amber-500/10" },
-  IN_PROGRESS: { label: "In Progress", icon: AlertTriangle, color: "text-sky-500 bg-sky-500/10" },
-  RESOLVED: { label: "Resolved", icon: CheckCircle2, color: "text-emerald-500 bg-emerald-500/10" },
-  CLOSED: { label: "Closed", icon: XCircle, color: "text-muted-foreground bg-muted/30" }
+const statusStyles: Record<TicketStatus, { label: string; class: string; icon: React.ComponentType<any> }> = {
+  OPEN: { label: "Open", class: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20", icon: Clock },
+  IN_PROGRESS: { label: "In Progress", class: "bg-blue-500/10 text-blue-600 border-blue-500/20", icon: RefreshCw },
+  COMPLETED: { label: "Resolved", class: "bg-green-500/10 text-green-600 border-green-500/20", icon: CheckCircle2 },
 };
 
-const PRIORITY_COLOR: Record<TicketPriority, string> = {
-  LOW: "text-muted-foreground bg-muted/30",
-  MEDIUM: "text-sky-500 bg-sky-500/10",
-  HIGH: "text-orange-500 bg-orange-500/10",
-  URGENT: "text-destructive bg-destructive/10"
+const priorityStyles: Record<TicketPriority, string> = {
+  LOW: "bg-gray-500/10 text-gray-500",
+  MEDIUM: "bg-yellow-500/10 text-yellow-600",
+  HIGH: "bg-orange-500/10 text-orange-600",
+  URGENT: "bg-red-500/10 text-red-600",
 };
+
+const emptyForm = { category: "", description: "", priority: "MEDIUM" as TicketPriority };
 
 export default function TenantSupportPage() {
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+
   const [showCreate, setShowCreate] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
-  const [form, setForm] = useState({ category: "", description: "", priority: "MEDIUM" as TicketPriority });
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const fetchTickets = async () => {
     setLoading(true);
@@ -56,33 +56,33 @@ export default function TenantSupportPage() {
     try {
       const res = await api.get("/support");
       setTickets(res.data);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to load tickets. Please try again later.");
+    } catch {
+      setError("Failed to load your support tickets.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchTickets();
-  }, []);
+  useEffect(() => { fetchTickets(); }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.category || !form.description) return;
-    setCreateLoading(true);
-
+    if (!form.category.trim() || !form.description.trim()) {
+      setFormError("Category and description are required.");
+      return;
+    }
+    setSaving(true);
+    setFormError("");
     try {
       await api.post("/support", form);
       setShowCreate(false);
-      setForm({ category: "", description: "", priority: "MEDIUM" });
+      setForm(emptyForm);
       await fetchTickets();
     } catch (err: any) {
-      console.error(err);
-      alert(err?.response?.data?.message || "Failed to create support ticket.");
+      const msg = err?.response?.data?.message;
+      setFormError(Array.isArray(msg) ? msg[0] : msg || "Failed to submit ticket.");
     } finally {
-      setCreateLoading(false);
+      setSaving(false);
     }
   };
 
@@ -92,194 +92,110 @@ export default function TenantSupportPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Support & Maintenance</h2>
-          <p className="text-sm text-muted-foreground">Submit maintenance requests or report issues directly to your landlord.</p>
+          <p className="text-sm text-muted-foreground">Submit and track your maintenance requests and complaints.</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all duration-200 active:scale-95 cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all cursor-pointer"
         >
-          <PlusCircle className="h-4 w-4" /> New Request
+          <Plus className="h-4 w-4" /> New Request
         </button>
       </div>
 
-      {/* Main List */}
-      <Card className="border border-border bg-card">
-        <CardContent className="p-6">
-          {loading ? (
-            <div className="flex flex-col items-center py-12 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Loading tickets...</p>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center py-12 text-center">
-              <AlertCircle className="h-10 w-10 text-destructive mb-2" />
-              <p className="text-sm font-semibold">{error}</p>
-              <button onClick={fetchTickets} className="text-primary hover:underline text-xs mt-2">
-                Retry
-              </button>
-            </div>
-          ) : tickets.length === 0 ? (
-            <div className="flex flex-col items-center py-16 text-center">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
-                <LifeBuoy className="h-6 w-6" />
-              </div>
-              <h3 className="font-bold text-lg">No support tickets</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                Everything looks good! If you have any issues with plumbing, electricity, or other assets, click the button above to file a request.
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {tickets.map((t) => {
-                const statusInfo = STATUS_META[t.status] || STATUS_META.OPEN;
-                const StatusIcon = statusInfo.icon;
-                return (
-                  <div
-                    key={t.id}
-                    onClick={() => setSelectedTicket(t)}
-                    className="flex items-center justify-between py-4 first:pt-0 last:pb-0 hover:bg-accent/30 px-3 -mx-3 rounded-xl transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${statusInfo.color}`}>
-                        <StatusIcon className="h-5 w-5" />
+      {/* Tickets */}
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : error ? (
+        <div className="flex flex-col items-center py-20 gap-3">
+          <AlertCircle className="h-9 w-9 text-destructive" />
+          <p className="text-sm">{error}</p>
+          <button onClick={fetchTickets} className="text-primary hover:underline text-xs">Retry</button>
+        </div>
+      ) : tickets.length === 0 ? (
+        <div className="flex flex-col items-center py-20 text-center gap-3">
+          <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <HelpCircle className="h-7 w-7 text-primary" />
+          </div>
+          <h3 className="font-bold">No support requests yet</h3>
+          <p className="text-sm text-muted-foreground max-w-sm">Need help with something? Submit a request and your landlord will respond.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tickets.map(ticket => {
+            const s = statusStyles[ticket.status];
+            const Icon = s.icon;
+            return (
+              <Card key={ticket.id} className="hover:shadow-md transition-all">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm">{ticket.category}</span>
+                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${priorityStyles[ticket.priority]}`}>
+                          {ticket.priority}
+                        </span>
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-bold text-foreground truncate">{t.category}</p>
-                          <Badge className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-0 ${PRIORITY_COLOR[t.priority]}`}>
-                            {t.priority}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-[400px] mt-0.5">
-                          {t.description}
-                        </p>
-                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{ticket.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Submitted {new Date(ticket.created_at).toLocaleDateString()}
+                        {ticket.resolved_at && ` · Resolved ${new Date(ticket.resolved_at).toLocaleDateString()}`}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right hidden sm:block">
-                        <p className="text-xs font-semibold text-foreground">
-                          {statusInfo.label}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          Filed on {new Date(t.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold flex-shrink-0 ${s.class}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                      {s.label}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-      {/* ─── MODAL: View Ticket Details ─── */}
-      <Dialog open={!!selectedTicket} onOpenChange={(open) => !open && setSelectedTicket(null)}>
-        <DialogContent className="sm:max-w-[480px]">
-          {selectedTicket && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge className={`text-[10px] font-bold uppercase tracking-wider border-0 ${STATUS_META[selectedTicket.status].color}`}>
-                    {selectedTicket.status}
-                  </Badge>
-                  <Badge className={`text-[10px] font-bold uppercase tracking-wider border-0 ${PRIORITY_COLOR[selectedTicket.priority]}`}>
-                    {selectedTicket.priority} Priority
-                  </Badge>
-                </div>
-                <DialogTitle className="text-lg font-bold">{selectedTicket.category}</DialogTitle>
-                <DialogDescription>
-                  Ticket ID: {selectedTicket.id} | Filed on {new Date(selectedTicket.created_at).toLocaleDateString()}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4 pt-2">
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Issue Description</p>
-                  <p className="text-sm bg-accent/40 rounded-xl p-4 border border-border/60 text-foreground leading-relaxed whitespace-pre-wrap">
-                    {selectedTicket.description}
-                  </p>
-                </div>
-
-                {selectedTicket.resolved_at && (
-                  <div className="flex items-center gap-3 p-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-xl text-sm font-semibold">
-                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-500" />
-                    <div>
-                      <p>Resolved</p>
-                      <p className="text-xs font-normal opacity-80">Issue closed on {new Date(selectedTicket.resolved_at).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ─── MODAL: Create New Support Request ─── */}
+      {/* Create Ticket Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">New Support Request</DialogTitle>
-            <DialogDescription>Describe the issue or repair needed. Your landlord will be notified.</DialogDescription>
+            <DialogTitle>Submit Support Request</DialogTitle>
+            <DialogDescription>Describe your issue and your landlord will be notified.</DialogDescription>
           </DialogHeader>
-
-          <form onSubmit={handleCreate} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category / Asset</Label>
-              <Input
-                id="category"
-                required
-                placeholder="e.g. Broken water pipe, AC not cooling"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full"
-              />
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            {formError && <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium">{formError}</div>}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="category">Category</Label>
+                <Input id="category" placeholder="e.g. Plumbing, Electrical" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Priority</Label>
+                <Select value={form.priority} onValueChange={v => { if (v) setForm(f => ({ ...f, priority: v as TicketPriority })); }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LOW">Low</SelectItem>
+                    <SelectItem value="MEDIUM">Medium</SelectItem>
+                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="URGENT">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="priority" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Priority</Label>
-              <Select
-                value={form.priority}
-                onValueChange={(val) => setForm({ ...form, priority: (val || "MEDIUM") as TicketPriority })}
-              >
-                <SelectTrigger id="priority" className="w-full">
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="LOW">Low (General Inquiry)</SelectItem>
-                  <SelectItem value="MEDIUM">Medium (Minor Issue)</SelectItem>
-                  <SelectItem value="HIGH">High (Urgent Repair)</SelectItem>
-                  <SelectItem value="URGENT">Urgent (Safety / Leak)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="description" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Detailed Description</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                required
-                rows={4}
-                placeholder="Please describe exactly what happened and where the problem is located..."
+                placeholder="Describe the issue in detail so your landlord can act quickly..."
+                className="min-h-[120px] resize-none"
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full resize-none"
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               />
             </div>
-
-            <button
-              type="submit"
-              disabled={createLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-60 cursor-pointer"
-            >
-              {createLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>Submit Request</>
-              )}
-            </button>
+            <DialogFooter>
+              <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
+              <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Submit Request
+              </button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
