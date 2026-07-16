@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
   FileSignature, Calendar, Building2, Home, User, DollarSign, Clock,
-  AlertTriangle, Loader2, AlertCircle, CheckCircle2, LogOut
+  AlertTriangle, Loader2, AlertCircle, CheckCircle2, LogOut, Check
 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -34,7 +34,7 @@ interface Agreement {
 }
 
 const statusConfig: Record<AgreementStatus, { label: string; class: string; icon: React.ComponentType<any> }> = {
-  DRAFT: { label: "Draft", class: "bg-gray-500/10 text-gray-500", icon: Clock },
+  DRAFT: { label: "Pending Invitation", class: "bg-blue-500/10 text-blue-500", icon: Clock },
   ACTIVE: { label: "Active", class: "bg-emerald-500/10 text-emerald-500", icon: CheckCircle2 },
   EXPIRED: { label: "Expired", class: "bg-orange-500/10 text-orange-500", icon: AlertCircle },
   TERMINATED: { label: "Terminated", class: "bg-red-500/10 text-red-500", icon: AlertCircle },
@@ -56,6 +56,9 @@ export default function TenantAgreementPage() {
   const [leaveTarget, setLeaveTarget] = useState<Agreement | null>(null);
   const [leaveSubmitting, setLeaveSubmitting] = useState(false);
   const [leaveError, setLeaveError] = useState("");
+
+  // Accept Invitation
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   const fetchAgreements = async () => {
     setLoading(true);
@@ -88,14 +91,27 @@ export default function TenantAgreementPage() {
     }
   };
 
+  const handleAcceptInvitation = async (id: string) => {
+    setAcceptingId(id);
+    try {
+      await api.patch(`/agreements/${id}/accept-invitation`);
+      await fetchAgreements();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Failed to accept lease invitation.");
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const pendingInvitations = agreements.filter(a => a.status === "DRAFT");
   const activeAgreement = agreements.find(a => a.status === "ACTIVE" || a.status === "TERMINATION_REQUESTED");
-  const pastAgreements = agreements.filter(a => a.status !== "ACTIVE" && a.status !== "TERMINATION_REQUESTED");
+  const pastAgreements = agreements.filter(a => a.status !== "ACTIVE" && a.status !== "TERMINATION_REQUESTED" && a.status !== "DRAFT");
 
   return (
     <DashboardLayout>
       <div>
         <h2 className="text-2xl font-bold tracking-tight">My Rental Agreements</h2>
-        <p className="text-sm text-muted-foreground">View your active lease, billing terms, and exit conditions.</p>
+        <p className="text-sm text-muted-foreground">View your active lease, billing terms, and accept new landlord invitations.</p>
       </div>
 
       {loading ? (
@@ -116,6 +132,23 @@ export default function TenantAgreementPage() {
         </div>
       ) : (
         <div className="space-y-8">
+          {/* Pending Invitations */}
+          {pendingInvitations.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-blue-500 uppercase tracking-widest text-xs">Lease Invitations</h3>
+              <div className="space-y-4">
+                {pendingInvitations.map(invitation => (
+                  <AgreementCard
+                    key={invitation.id}
+                    agreement={invitation}
+                    onAccept={() => handleAcceptInvitation(invitation.id)}
+                    accepting={acceptingId === invitation.id}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Active Agreement */}
           {activeAgreement && (
             <div className="space-y-4">
@@ -178,12 +211,22 @@ export default function TenantAgreementPage() {
   );
 }
 
-function AgreementCard({ agreement, onRequestLeave }: { agreement: Agreement; onRequestLeave?: () => void }) {
+function AgreementCard({
+  agreement,
+  onRequestLeave,
+  onAccept,
+  accepting
+}: {
+  agreement: Agreement;
+  onRequestLeave?: () => void;
+  onAccept?: () => void;
+  accepting?: boolean;
+}) {
   const status = statusConfig[agreement.status];
   const StatusIcon = status.icon;
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-all">
+    <Card className="overflow-hidden hover:shadow-md transition-all border border-border/80">
       <CardHeader className="pb-3 border-b border-border bg-accent/10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -207,7 +250,7 @@ function AgreementCard({ agreement, onRequestLeave }: { agreement: Agreement; on
         {/* Key Details Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: "Room", value: `Room ${agreement.room.room_number}`, icon: Home },
+            { label: "Room", value: `Room ${agreement.room?.room_number || "Pending"}`, icon: Home },
             { label: "Monthly Rent", value: `$${Number(agreement.rent_amount).toFixed(2)}`, icon: DollarSign },
             { label: "Collection Day", value: `${agreement.collection_day}th of Month`, icon: Calendar },
             { label: "Security Deposit", value: `$${Number(agreement.security_deposit).toFixed(2)}`, icon: DollarSign },
@@ -231,10 +274,10 @@ function AgreementCard({ agreement, onRequestLeave }: { agreement: Agreement; on
           <div className="space-y-1">
             <p className="text-[10px] uppercase font-bold text-muted-foreground">Landlord / Manager</p>
             <p className="text-sm font-semibold">
-              {agreement.landlord.company_name ||
-                `${agreement.landlord.user.first_name} ${agreement.landlord.user.last_name}`}
+              {agreement.landlord?.company_name ||
+                `${agreement.landlord?.user?.first_name || ""} ${agreement.landlord?.user?.last_name || ""}`}
             </p>
-            <p className="text-xs text-muted-foreground">{agreement.landlord.user.phone}</p>
+            <p className="text-xs text-muted-foreground">{agreement.landlord?.user?.phone || ""}</p>
           </div>
         </div>
 
@@ -252,6 +295,20 @@ function AgreementCard({ agreement, onRequestLeave }: { agreement: Agreement; on
             Grace Period: {agreement.grace_period_days} days · Late Fee: ${Number(agreement.late_fee_flat).toFixed(2)}
           </p>
         </div>
+
+        {/* Accept / Reject Buttons for DRAFT (Lease Invitations) */}
+        {onAccept && (
+          <div className="flex justify-end pt-2 gap-2">
+            <button
+              onClick={onAccept}
+              disabled={accepting}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer disabled:opacity-60"
+            >
+              {accepting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Accept Invitation
+            </button>
+          </div>
+        )}
 
         {/* Request to Leave Button */}
         {onRequestLeave && (
@@ -277,5 +334,3 @@ function AgreementCard({ agreement, onRequestLeave }: { agreement: Agreement; on
     </Card>
   );
 }
-
-

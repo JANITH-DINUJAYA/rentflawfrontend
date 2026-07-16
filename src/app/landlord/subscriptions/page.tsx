@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Crown, Check, Loader2, AlertCircle, ArrowRight, Star, Building2 } from "lucide-react";
+import { Crown, Check, Loader2, AlertCircle, ArrowRight, Star, Building2, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -39,6 +39,11 @@ export default function LandlordSubscriptionsPage() {
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState("");
 
+  // Cancel subscription states
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+
   const fetchData = async () => {
     setLoading(true);
     setError("");
@@ -74,11 +79,25 @@ export default function LandlordSubscriptionsPage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    setCancelling(true);
+    setCancelError("");
+    try {
+      await api.post("/subscriptions/cancel");
+      setCancelOpen(false);
+      await fetchData();
+    } catch (err: any) {
+      setCancelError(err?.response?.data?.message || "Failed to cancel subscription.");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Subscription & Billing</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage your SaaS plan and upgrade when you need more capacity.</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage your SaaS plan and upgrade or cancel when needed.</p>
       </div>
 
       {loading ? (
@@ -100,7 +119,16 @@ export default function LandlordSubscriptionsPage() {
                     <p className="text-xs font-bold text-primary uppercase tracking-widest">Current Plan</p>
                     <CardTitle className="text-2xl font-extrabold mt-1">{mySubscription.package.name}</CardTitle>
                   </div>
-                  <Badge variant="default" className="text-xs">{mySubscription.status}</Badge>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="default" className="text-xs">{mySubscription.status}</Badge>
+                    <button
+                      onClick={() => setCancelOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors text-xs font-bold cursor-pointer"
+                      title="Cancel subscription"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Cancel Subscription
+                    </button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -200,6 +228,26 @@ export default function LandlordSubscriptionsPage() {
             <button onClick={() => setUpgradeTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
             <button onClick={handleUpgrade} disabled={upgrading} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
               {upgrading && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirm
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelOpen} onOpenChange={o => !o && setCancelOpen(false)}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-500 flex items-center gap-2">Cancel Subscription</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel your current subscription plan?
+              This will remove all features and limits immediately.
+            </DialogDescription>
+          </DialogHeader>
+          {cancelError && <p className="text-xs text-destructive font-medium">{cancelError}</p>}
+          <DialogFooter>
+            <button onClick={() => setCancelOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Close</button>
+            <button onClick={handleCancelSubscription} disabled={cancelling} className="px-4 py-2 text-sm font-bold rounded-lg bg-red-500 text-white hover:bg-red-600 flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+              {cancelling && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirm Cancellation
             </button>
           </DialogFooter>
         </DialogContent>

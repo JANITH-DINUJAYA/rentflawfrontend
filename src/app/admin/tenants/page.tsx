@@ -6,7 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, AlertCircle, Users } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Search, Loader2, AlertCircle, Plus, Edit2, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface Tenant {
@@ -15,6 +17,8 @@ interface Tenant {
   last_name: string;
   email: string;
   phone: string;
+  nic_or_passport: string;
+  tenant_code: string | null;
   created_at: string;
   rental_agreements?: { status: string }[];
 }
@@ -24,6 +28,23 @@ export default function AdminTenantsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+
+  // Dialog states
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Form states
+  const [targetId, setTargetId] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [nic, setNic] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [formPending, setFormPending] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -40,8 +61,93 @@ export default function AdminTenantsPage() {
 
   useEffect(() => { fetchTenants(); }, []);
 
+  const openCreate = () => {
+    setFormError("");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhone("");
+    setNic("");
+    setPassword("");
+    setCreateOpen(true);
+  };
+
+  const openEdit = (t: Tenant) => {
+    setFormError("");
+    setTargetId(t.id);
+    setFirstName(t.first_name);
+    setLastName(t.last_name);
+    setEmail(t.email);
+    setPhone(t.phone);
+    setNic(t.nic_or_passport || "");
+    setEditOpen(true);
+  };
+
+  const openDelete = (id: string) => {
+    setFormError("");
+    setTargetId(id);
+    setDeleteOpen(true);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormPending(true);
+    setFormError("");
+    try {
+      await api.post("/tenants", {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone,
+        nic_or_passport: nic,
+        password: password || undefined,
+      });
+      setCreateOpen(false);
+      fetchTenants();
+    } catch (err: any) {
+      setFormError(err.response?.data?.message || "Failed to create tenant.");
+    } finally {
+      setFormPending(false);
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormPending(true);
+    setFormError("");
+    try {
+      await api.patch(`/tenants/${targetId}`, {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone,
+        nic_or_passport: nic,
+      });
+      setEditOpen(false);
+      fetchTenants();
+    } catch (err: any) {
+      setFormError(err.response?.data?.message || "Failed to update tenant.");
+    } finally {
+      setFormPending(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setFormPending(true);
+    setFormError("");
+    try {
+      await api.delete(`/tenants/${targetId}`);
+      setDeleteOpen(false);
+      fetchTenants();
+    } catch (err: any) {
+      setFormError(err.response?.data?.message || "Failed to delete tenant.");
+    } finally {
+      setFormPending(false);
+    }
+  };
+
   const filtered = tenants.filter(t =>
-    `${t.first_name} ${t.last_name} ${t.email}`.toLowerCase().includes(search.toLowerCase())
+    `${t.first_name} ${t.last_name} ${t.email} ${t.tenant_code || ""}`.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -51,14 +157,22 @@ export default function AdminTenantsPage() {
           <h2 className="text-2xl font-bold tracking-tight">Tenant Accounts</h2>
           <p className="text-sm text-muted-foreground">All registered tenants across the platform.</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-background w-full sm:w-72">
-          <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          <input
-            className="text-sm bg-transparent outline-none flex-1 placeholder:text-muted-foreground"
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-background w-full sm:w-60">
+            <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <input
+              className="text-sm bg-transparent outline-none flex-1 placeholder:text-muted-foreground"
+              placeholder="Search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Create Tenant
+          </button>
         </div>
       </div>
 
@@ -79,16 +193,19 @@ export default function AdminTenantsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tenant</TableHead>
+                  <TableHead>Share Code</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>NIC / Passport</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       {search ? `No tenants matching "${search}"` : "No tenants registered yet."}
                     </TableCell>
                   </TableRow>
@@ -105,8 +222,10 @@ export default function AdminTenantsPage() {
                             <span className="font-semibold text-sm">{t.first_name} {t.last_name}</span>
                           </div>
                         </TableCell>
+                        <TableCell className="text-sm font-mono font-bold tracking-wider">{t.tenant_code || "—"}</TableCell>
                         <TableCell className="text-sm">{t.email}</TableCell>
                         <TableCell className="text-sm">{t.phone}</TableCell>
+                        <TableCell className="text-sm font-mono">{t.nic_or_passport}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {new Date(t.created_at).toLocaleDateString()}
                         </TableCell>
@@ -114,6 +233,24 @@ export default function AdminTenantsPage() {
                           <Badge variant={hasActive ? "default" : "secondary"} className="text-[10px]">
                             {hasActive ? "Active Tenant" : "No Active Lease"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1.5">
+                            <button
+                              onClick={() => openEdit(t)}
+                              className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                              title="Edit details"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => openDelete(t.id)}
+                              className="p-1.5 rounded-lg border border-border hover:bg-red-500/10 text-muted-foreground hover:text-red-500 cursor-pointer transition-colors"
+                              title="Delete tenant"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -124,6 +261,116 @@ export default function AdminTenantsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Create Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-extrabold">Create Tenant Profile</DialogTitle>
+            <DialogDescription>Setup a new tenant user account on the platform.</DialogDescription>
+          </DialogHeader>
+          {formError && <p className="text-xs text-destructive font-medium">{formError}</p>}
+          <form onSubmit={handleCreate} className="space-y-3.5 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="c-fn">First Name</Label>
+                <Input id="c-fn" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="c-ln">Last Name</Label>
+                <Input id="c-ln" value={lastName} onChange={e => setLastName(e.target.value)} required />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="c-email">Email Address</Label>
+              <Input id="c-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="c-phone">Phone Number</Label>
+                <Input id="c-phone" value={phone} onChange={e => setPhone(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="c-nic">NIC or Passport</Label>
+                <Input id="c-nic" value={nic} onChange={e => setNic(e.target.value)} required />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="c-pw">Temporary Password (Optional)</Label>
+              <Input id="c-pw" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+            </div>
+            <DialogFooter className="pt-3">
+              <button type="button" onClick={() => setCreateOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
+              <button type="submit" disabled={formPending} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+                {formPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Create Account
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-extrabold">Edit Tenant Profile</DialogTitle>
+            <DialogDescription>Modify user contact details or references.</DialogDescription>
+          </DialogHeader>
+          {formError && <p className="text-xs text-destructive font-medium">{formError}</p>}
+          <form onSubmit={handleUpdate} className="space-y-3.5 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="e-fn">First Name</Label>
+                <Input id="e-fn" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="e-ln">Last Name</Label>
+                <Input id="e-ln" value={lastName} onChange={e => setLastName(e.target.value)} required />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="e-email">Email Address</Label>
+              <Input id="e-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="e-phone">Phone Number</Label>
+                <Input id="e-phone" value={phone} onChange={e => setPhone(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="e-nic">NIC or Passport</Label>
+                <Input id="e-nic" value={nic} onChange={e => setNic(e.target.value)} required />
+              </div>
+            </div>
+            <DialogFooter className="pt-3">
+              <button type="button" onClick={() => setEditOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
+              <button type="submit" disabled={formPending} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+                {formPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save Changes
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-500">Delete Tenant Account</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this tenant?
+              This action is permanent and will cascade delete all linked details.
+            </DialogDescription>
+          </DialogHeader>
+          {formError && <p className="text-xs text-destructive font-medium">{formError}</p>}
+          <DialogFooter className="gap-2">
+            <button onClick={() => setDeleteOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
+            <button onClick={handleDelete} disabled={formPending} className="px-4 py-2 text-sm font-bold rounded-lg bg-red-500 text-white hover:bg-red-600 flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+              {formPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirm Delete
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

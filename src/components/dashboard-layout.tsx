@@ -27,7 +27,9 @@ import {
   Shield,
   ChevronRight,
   Activity,
+  MessageSquare,
 } from "lucide-react";
+import { api } from "@/lib/api";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -52,6 +54,7 @@ const adminItems: SidebarItem[] = [
   { label: "Overview", href: "/admin/dashboard", icon: LayoutDashboard, group: "Platform" },
   { label: "Landlords", href: "/admin/landlords", icon: Building2, group: "Platform" },
   { label: "Tenants", href: "/admin/tenants", icon: Users, group: "Platform" },
+  { label: "Inbox", href: "/messages", icon: MessageSquare, group: "Platform" },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: Gauge, group: "Billing" },
   { label: "System Config", href: "/admin/system", icon: Settings, group: "Billing" },
 ];
@@ -63,6 +66,7 @@ const landlordItems: SidebarItem[] = [
   { label: "Rooms", href: "/landlord/rooms", icon: DoorOpen, group: "Assets" },
   { label: "Tenants", href: "/landlord/tenants", icon: Users, group: "People" },
   { label: "Agreements", href: "/landlord/agreements", icon: FileSignature, group: "People" },
+  { label: "Inbox", href: "/messages", icon: MessageSquare, group: "People" },
   { label: "Invoices", href: "/landlord/invoices", icon: FileText, group: "Finance" },
   { label: "Payments", href: "/landlord/payments", icon: DollarSign, group: "Finance" },
   { label: "Utility Bills", href: "/landlord/utilities", icon: Zap, group: "Finance" },
@@ -74,6 +78,7 @@ const landlordItems: SidebarItem[] = [
 
 const tenantItems: SidebarItem[] = [
   { label: "Dashboard", href: "/tenant", icon: LayoutDashboard, group: "Home" },
+  { label: "Inbox", href: "/messages", icon: MessageSquare, group: "Home" },
   { label: "Submit Payment", href: "/tenant/payments/submit", icon: UploadCloud, group: "Finance" },
   { label: "My Invoices", href: "/tenant/invoices", icon: FileText, group: "Finance" },
   { label: "My Agreement", href: "/tenant/agreement", icon: FileSignature, group: "Lease" },
@@ -116,6 +121,44 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [notifications, setNotifications] = React.useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  const fetchNotifications = React.useCallback(async () => {
+    try {
+      const res = await api.get("/notifications");
+      setNotifications(res.data);
+      setUnreadCount(res.data.filter((n: any) => !n.is_read).length);
+    } catch (err) {
+      console.error("Failed to fetch notifications", err);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 15000); // 15 seconds poll
+      return () => clearInterval(interval);
+    }
+  }, [user, fetchNotifications]);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await api.delete("/notifications");
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   React.useEffect(() => {
     checkAuth();
@@ -291,10 +334,55 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-2">
             {/* Notification bell */}
-            <button className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent/50 relative">
-              <Bell className="h-4.5 w-4.5" />
-              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-destructive" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent/50 relative">
+                <Bell className="h-4.5 w-4.5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto p-2">
+                <div className="flex items-center justify-between px-2 py-1.5 border-b border-border mb-1">
+                  <span className="text-xs font-bold">Notifications</span>
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={handleClearAll}
+                      className="text-[10px] text-muted-foreground hover:text-destructive font-medium transition-colors cursor-pointer"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground">
+                    No notifications
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <DropdownMenuItem
+                      key={n.id}
+                      onClick={() => handleMarkAsRead(n.id)}
+                      className={`flex flex-col items-start gap-1 p-2.5 rounded-lg border-b border-border/50 last:border-b-0 cursor-pointer ${
+                        !n.is_read ? "bg-primary/5 hover:bg-primary/10 font-medium" : "hover:bg-accent/50"
+                      }`}
+                    >
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <span className="text-xs font-bold truncate">{n.title}</span>
+                        {!n.is_read && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-normal">
+                        {n.message}
+                      </p>
+                      <span className="text-[9px] text-muted-foreground/70 font-mono mt-1">
+                        {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Profile dropdown */}
             <DropdownMenu>

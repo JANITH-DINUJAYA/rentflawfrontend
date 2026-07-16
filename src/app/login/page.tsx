@@ -27,17 +27,6 @@ const portals = [
     glow: "oklch(0.50 0.16 185 / 25%)",
     hoverBorder: "hover:border-teal-500/40",
   },
-  {
-    href: "/admin/login",
-    icon: Shield,
-    name: "Admin Console",
-    sub: "Admin",
-    description: "Full platform control — manage landlords, subscriptions, and system configuration.",
-    badge: "SAAS ADMIN",
-    gradient: "linear-gradient(135deg, oklch(0.16 0.06 280) 0%, oklch(0.58 0.24 300) 100%)",
-    glow: "oklch(0.58 0.24 300 / 25%)",
-    hoverBorder: "hover:border-purple-500/40",
-  },
 ];
 
 export default function PortalSelectorPage() {
@@ -72,7 +61,7 @@ export default function PortalSelectorPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-4xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-3xl">
           {portals.map((portal) => {
             const Icon = portal.icon;
             return (
