@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useTheme, ColorTheme } from "@/components/theme-provider";
 import { 
   Building2, 
@@ -64,12 +65,18 @@ export default function LandingPage() {
               )}
             </button>
 
-            <button className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg text-primary hover:bg-primary/10 border border-primary/20 transition-all duration-200">
+            <Link
+              href="/login"
+              className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg text-primary hover:bg-primary/10 border border-primary/20 transition-all duration-200"
+            >
               Log In
-            </button>
-            <button className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all duration-200">
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all duration-200"
+            >
               Get Started <ChevronRight className="ml-1 h-4 w-4" />
-            </button>
+            </Link>
           </div>
         </div>
       </header>
@@ -97,10 +104,13 @@ export default function LandingPage() {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <button className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 text-base font-medium rounded-xl bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/20 transition-all duration-200 group">
+              <Link
+                href="/register"
+                className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 text-base font-medium rounded-xl bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/20 transition-all duration-200 group"
+              >
                 Start Free Trial 
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
-              </button>
+              </Link>
               <button className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 text-base font-medium rounded-xl border border-border hover:bg-accent/50 transition-all duration-200">
                 Book a Demo
               </button>

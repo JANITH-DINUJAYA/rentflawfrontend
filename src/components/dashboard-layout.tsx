@@ -54,7 +54,10 @@ const adminItems: SidebarItem[] = [
   { label: "Overview", href: "/admin/dashboard", icon: LayoutDashboard, group: "Platform" },
   { label: "Landlords", href: "/admin/landlords", icon: Building2, group: "Platform" },
   { label: "Tenants", href: "/admin/tenants", icon: Users, group: "Platform" },
+  { label: "Properties", href: "/admin/properties", icon: Building, group: "Platform" },
+  { label: "Agreements", href: "/admin/agreements", icon: FileSignature, group: "Platform" },
   { label: "Inbox", href: "/messages", icon: MessageSquare, group: "Platform" },
+  { label: "Roles & Staff", href: "/admin/roles", icon: Shield, group: "Management" },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: Gauge, group: "Billing" },
   { label: "System Config", href: "/admin/system", icon: Settings, group: "Billing" },
 ];
@@ -166,11 +169,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (initialized && !user) {
-      // Redirect to portal-specific login based on current URL
+      // Redirect to portal-specific login based on current URL or last known role
       const loginPath =
         pathname.startsWith("/admin") ? "/admin/login" :
         pathname.startsWith("/tenant") ? "/tenant/login" :
-        "/landlord/login";
+        pathname.startsWith("/landlord") ? "/landlord/login" :
+        // For shared paths like /profile, /messages — use role if available
+        "/login";
       router.push(loginPath);
     }
   }, [initialized, user, router, pathname]);
@@ -270,8 +275,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ── User Footer ── */}
-      <div className="p-4 border-t" style={{ borderColor: "var(--portal-sidebar-border)", background: "color-mix(in oklch, var(--portal-sidebar-bg) 90%, black)" }}>
-        <div className="flex items-center gap-3">
+      <div className="p-4 border-t flex items-center justify-between gap-3" style={{ borderColor: "var(--portal-sidebar-border)", background: "color-mix(in oklch, var(--portal-sidebar-bg) 90%, black)" }}>
+        <Link href="/profile" className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-85 transition-opacity">
           <div className="portal-sidebar-logo h-8 w-8 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">
             {user?.first_name?.[0] || "U"}
           </div>
@@ -283,15 +288,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               {user?.email}
             </p>
           </div>
-          <button
-            onClick={logout}
-            title="Log Out"
-            style={{ color: "var(--portal-sidebar-muted)" }}
-            className="p-1.5 rounded-lg hover:text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
+        </Link>
+        <button
+          onClick={logout}
+          title="Log Out"
+          style={{ color: "var(--portal-sidebar-muted)" }}
+          className="p-1.5 rounded-lg hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
@@ -395,18 +400,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <p className="text-xs text-muted-foreground font-normal">{config.label}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Link href="/profile" className="flex items-center w-full">
-                    <User className="mr-2 h-4 w-4" /> Profile Details
-                  </Link>
+                <DropdownMenuItem onClick={() => router.push("/profile")} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" /> Profile & Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href="/settings" className="flex items-center w-full">
-                    <Settings className="mr-2 h-4 w-4" /> Settings
-                  </Link>
+                <DropdownMenuItem onClick={() => router.push("/messages")} className="cursor-pointer">
+                  <MessageSquare className="mr-2 h-4 w-4" /> Messages
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                <DropdownMenuItem onClick={logout} className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" /> Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -77,6 +77,17 @@ export default function AdminSubscriptionsPage() {
     }
   };
 
+  const handleDeletePackage = async (id: string, name: string) => {
+    if (!confirm(`Delete package "${name}"? This will fail if any landlords are actively subscribed to it.`)) return;
+    try {
+      await api.delete(`/subscriptions/packages/${id}`);
+      await fetchPackages();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      alert(Array.isArray(msg) ? msg[0] : msg || "Cannot delete: package has active subscribers.");
+    }
+  };
+
   return (
     <DashboardLayout>
       {/* Header */}
@@ -124,9 +135,18 @@ export default function AdminSubscriptionsPage() {
                     <div className={`h-12 w-12 rounded-2xl ${bg} ${color} flex items-center justify-center`}>
                       <Icon className="h-6 w-6" />
                     </div>
-                    <Badge variant={pkg.is_active ? "default" : "secondary"} className="text-[10px]">
-                      {pkg.is_active ? "Active" : "Inactive"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={pkg.is_active ? "default" : "secondary"} className="text-[10px]">
+                        {pkg.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      <button
+                        onClick={() => handleDeletePackage(pkg.id, pkg.name)}
+                        title="Delete package"
+                        className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   <CardTitle className="text-xl font-extrabold mt-3">{pkg.name}</CardTitle>
                   <p className="text-3xl font-black mt-1">

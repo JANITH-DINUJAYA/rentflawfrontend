@@ -177,7 +177,6 @@ export default function TenantLoginPage() {
             </div>
             <div className="flex items-center justify-center gap-4 text-xs">
               <Link href="/landlord/login" className="text-muted-foreground hover:text-primary transition-colors">🏢 Landlord Login</Link>
-              <Link href="/admin/login" className="text-muted-foreground hover:text-primary transition-colors">🛡 Admin Login</Link>
             </div>
           </div>
         </div>
