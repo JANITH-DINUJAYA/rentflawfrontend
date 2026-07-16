@@ -1,0 +1,78 @@
+import { create } from 'zustand';
+import { api } from '@/lib/api';
+
+export type GlobalRole = 'SAAS_ADMIN' | 'LANDLORD' | 'STAFF' | 'TENANT';
+
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  global_role: GlobalRole;
+  tenant_code?: string;
+  landlord_profile?: {
+    id: string;
+    company_name: string;
+  };
+  staff_profile?: {
+    id: string;
+    landlord_id: string;
+    role: {
+      name: string;
+      permissions: { action: string }[];
+    };
+  };
+}
+
+interface AuthState {
+  user: User | null;
+  loading: boolean;
+  initialized: boolean;
+  setUser: (user: User | null) => void;
+  login: (accessToken: string, user: User) => void;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<void>;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  loading: true,
+  initialized: false,
+
+  setUser: (user) => set({ user }),
+
+  login: (accessToken, user) => {
+    localStorage.setItem('rf-access-token', accessToken);
+    set({ user, loading: false });
+  },
+
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      console.error('Logout API call failed', e);
+    } finally {
+      localStorage.removeItem('rf-access-token');
+      set({ user: null, loading: false });
+      window.location.href = '/login';
+    }
+  },
+
+  checkAuth: async () => {
+    const token = localStorage.getItem('rf-access-token');
+    if (!token) {
+      set({ user: null, loading: false, initialized: true });
+      return;
+    }
+
+    try {
+      // Fetch currently authenticated user profile
+      const res = await api.get('/auth/me');
+      set({ user: res.data, loading: false, initialized: true });
+    } catch (e) {
+      console.error('Session verification failed', e);
+      localStorage.removeItem('rf-access-token');
+      set({ user: null, loading: false, initialized: true });
+    }
+  },
+}));
