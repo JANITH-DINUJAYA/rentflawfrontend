@@ -18,8 +18,11 @@ export default function RegisterPage() {
     last_name: "",
     email: "",
     password: "",
+    phone: "",
+    nic_or_passport: "",
     global_role: "LANDLORD" as Role,
-    tenant_code: "", // only used if TENANT
+    company_name: "",
+    tenant_code: "",
   });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,12 +34,19 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const payload =
-        form.global_role === "TENANT"
-          ? form
-          : { first_name: form.first_name, last_name: form.last_name, email: form.email, password: form.password, global_role: form.global_role };
+      const payload = {
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+        password: form.password,
+        phone: form.phone,
+        nic_or_passport: form.nic_or_passport,
+        global_role: form.global_role,
+        ...(form.global_role === "LANDLORD" && form.company_name ? { company_name: form.company_name } : {}),
+        ...(form.global_role === "TENANT" && form.tenant_code ? { tenant_code: form.tenant_code } : {}),
+      };
 
-      const res = await api.post("/auth/register", payload);
+      await api.post("/auth/register", payload);
 
       // Auto-login after register
       const loginRes = await api.post("/auth/login", {
@@ -106,7 +116,7 @@ export default function RegisterPage() {
 
       {/* ── Right Panel — Form ── */}
       <div className="flex-1 flex items-center justify-center bg-background p-8">
-        <div className="w-full max-w-[420px] space-y-6">
+        <div className="w-full max-w-[440px] space-y-6 overflow-y-auto max-h-screen py-4">
           <div className="flex items-center gap-2 lg:hidden">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <Building2 className="h-4 w-4 text-primary-foreground" />
@@ -175,6 +185,31 @@ export default function RegisterPage() {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">Phone number</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="+94712345678"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">NIC or Passport</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="123456789V"
+                  value={form.nic_or_passport}
+                  onChange={(e) => setForm({ ...form, nic_or_passport: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-foreground">Password</label>
               <div className="relative">
@@ -197,12 +232,26 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {/* Landlord Company Name */}
+            {form.global_role === "LANDLORD" && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">Company Name (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Greenwood Rentals"
+                  value={form.company_name}
+                  onChange={(e) => setForm({ ...form, company_name: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                />
+              </div>
+            )}
+
             {/* Tenant invite code */}
             {form.global_role === "TENANT" && (
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-foreground">
-                  Landlord Invite Code
-                  <span className="ml-1 text-xs text-muted-foreground font-normal">(given by your landlord)</span>
+                  Landlord Invite Code (Optional)
+                  <span className="ml-1 text-xs text-muted-foreground font-normal">(if you have one)</span>
                 </label>
                 <input
                   type="text"

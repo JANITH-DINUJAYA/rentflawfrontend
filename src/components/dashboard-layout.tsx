@@ -29,7 +29,7 @@ import {
   Activity,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,11 +113,19 @@ const portalConfig = {
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, checkAuth, initialized } = useAuthStore();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   React.useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  React.useEffect(() => {
+    if (initialized && !user) {
+      router.push("/login");
+    }
+  }, [initialized, user, router]);
+
 
   if (!initialized) {
     return (
