@@ -45,7 +45,7 @@ const AVAILABLE_PERMISSIONS = [
   { action: "SYSTEM_SUPPORT", label: "System Chat Support", desc: "Communicate with platform users via system chat" },
 ];
 
-const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "" };
+const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };
 
 export default function AdminRolesPage() {
   const [roles, setRoles] = useState<CustomRole[]>([]);
@@ -134,9 +134,13 @@ export default function AdminRolesPage() {
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { email, first_name, last_name, phone, role_id } = staffForm;
-    if (!email || !first_name || !last_name || !phone || !role_id) {
-      setStaffError("All fields are required.");
+    const { email, first_name, last_name, phone, role_id, password } = staffForm;
+    if (!email || !first_name || !last_name || !phone || !role_id || !password) {
+      setStaffError("All fields including password are required.");
+      return;
+    }
+    if (password.length < 8) {
+      setStaffError("Password must be at least 8 characters.");
       return;
     }
     setStaffSaving(true);
@@ -395,6 +399,11 @@ export default function AdminRolesPage() {
             <div className="space-y-1">
               <Label htmlFor="sphone">Phone Number</Label>
               <Input id="sphone" value={staffForm.phone} onChange={e => setStaffForm({ ...staffForm, phone: e.target.value })} required />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="spassword">Login Password</Label>
+              <Input id="spassword" type="password" placeholder="Min 8 characters" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} required />
+              <p className="text-[10px] text-muted-foreground">Share this password securely with the staff member.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="srole">Assigned System Role</Label>

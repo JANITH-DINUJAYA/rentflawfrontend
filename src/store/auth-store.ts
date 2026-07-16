@@ -47,6 +47,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    // Capture role before clearing user state
+    const currentUser = useAuthStore.getState().user;
+    const role = currentUser?.global_role;
     try {
       await api.post('/auth/logout');
     } catch (e) {
@@ -54,7 +57,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       localStorage.removeItem('rf-access-token');
       set({ user: null, loading: false });
-      window.location.href = '/login';
+      // Redirect to the appropriate portal login
+      if (role === 'SAAS_ADMIN') {
+        window.location.href = '/admin/login';
+      } else if (role === 'LANDLORD' || role === 'STAFF') {
+        window.location.href = '/landlord/login';
+      } else {
+        window.location.href = '/login';
+      }
     }
   },
 

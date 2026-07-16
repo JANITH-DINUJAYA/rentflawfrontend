@@ -46,7 +46,7 @@ const AVAILABLE_PERMISSIONS = [
   { action: "VIEW_REPORTS", label: "View Reports", desc: "Access property reports and financial analytics" },
 ];
 
-const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "" };
+const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };
 
 export default function LandlordRolesPage() {
   const [roles, setRoles] = useState<CustomRole[]>([]);
@@ -135,9 +135,13 @@ export default function LandlordRolesPage() {
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { email, first_name, last_name, phone, role_id } = staffForm;
-    if (!email || !first_name || !last_name || !phone || !role_id) {
-      setStaffError("All fields are required.");
+    const { email, first_name, last_name, phone, role_id, password } = staffForm;
+    if (!email || !first_name || !last_name || !phone || !role_id || !password) {
+      setStaffError("All fields including password are required.");
+      return;
+    }
+    if (password.length < 8) {
+      setStaffError("Password must be at least 8 characters.");
       return;
     }
     setStaffSaving(true);
@@ -377,6 +381,11 @@ export default function LandlordRolesPage() {
             <div className="space-y-1.5">
               <Label htmlFor="staff-phone">Phone Number</Label>
               <Input id="staff-phone" placeholder="+947..." value={staffForm.phone} onChange={e => setStaffForm({ ...staffForm, phone: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="staff-password">Login Password</Label>
+              <Input id="staff-password" type="password" placeholder="Min 8 characters" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} />
+              <p className="text-[10px] text-muted-foreground">This will be the staff member&apos;s login password. Share it with them securely.</p>
             </div>
             <div className="space-y-1.5">
               <Label>Select Role</Label>

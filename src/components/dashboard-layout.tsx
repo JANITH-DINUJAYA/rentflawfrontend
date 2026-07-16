@@ -389,29 +389,22 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Profile dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold border border-primary/20 hover:bg-primary/20 transition-colors text-sm">
-                {user?.first_name?.[0] || "U"}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <p className="text-sm font-semibold">{user?.first_name} {user?.last_name}</p>
-                  <p className="text-xs text-muted-foreground font-normal">{config.label}</p>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/profile")} className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" /> Profile & Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/messages")} className="cursor-pointer">
-                  <MessageSquare className="mr-2 h-4 w-4" /> Messages
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer">
-                  <LogOut className="mr-2 h-4 w-4" /> Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Profile — clicking the avatar goes directly to /profile */}
+            <Link
+              href="/profile"
+              title="Profile & Settings"
+              className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold border border-primary/20 hover:bg-primary/20 transition-colors text-sm"
+            >
+              {user?.first_name?.[0] || "U"}
+            </Link>
+            {/* Logout button */}
+            <button
+              onClick={logout}
+              title="Log out"
+              className="h-9 w-9 rounded-xl border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </header>
 
