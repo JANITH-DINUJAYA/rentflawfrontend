@@ -208,11 +208,12 @@ export default function TenantsPage() {
     }
   };
 
-  const handlePropertyChange = (propertyId: string) => {
-    setInviteForm(f => ({ ...f, propertyId, roomId: "" }));
+  const handlePropertyChange = (propertyId: string | null) => {
+    setInviteForm(f => ({ ...f, propertyId: propertyId || "", roomId: "" }));
   };
 
-  const handleRoomChange = (roomId: string) => {
+  const handleRoomChange = (roomId: string | null) => {
+    if (!roomId) return;
     const r = rooms.find(room => room.id === roomId);
     setInviteForm(f => ({
       ...f,
@@ -556,7 +557,7 @@ export default function TenantsPage() {
                 {/* Leaving options */}
                 <div className="space-y-1.5">
                   <Label>Leaving / Checkout Option</Label>
-                  <Select value={inviteForm.leavingOption} onValueChange={val => setInviteForm({ ...inviteForm, leavingOption: val })}>
+                  <Select value={inviteForm.leavingOption} onValueChange={val => setInviteForm({ ...inviteForm, leavingOption: val || "PAY_STAY_DATES" })}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -571,7 +572,7 @@ export default function TenantsPage() {
                 {inviteForm.leavingOption === "DECIDE_IN_AGREEMENT" && (
                   <div className="space-y-1.5">
                     <Label>Active Leaving Rule (for exit month)</Label>
-                    <Select value={inviteForm.leavingRule} onValueChange={val => setInviteForm({ ...inviteForm, leavingRule: val })}>
+                    <Select value={inviteForm.leavingRule} onValueChange={val => setInviteForm({ ...inviteForm, leavingRule: val || "" })}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Choose active checkout rule" />
                       </SelectTrigger>

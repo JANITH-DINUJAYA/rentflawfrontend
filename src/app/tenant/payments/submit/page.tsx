@@ -192,7 +192,7 @@ export default function TenantSubmitPaymentPage() {
                         All invoices are fully paid! No outstanding balances.
                       </div>
                     ) : (
-                      <Select value={invoiceId} onValueChange={handleInvoiceChange}>
+                      <Select value={invoiceId} onValueChange={v => v && handleInvoiceChange(v)}>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Choose outstanding invoice" />
                         </SelectTrigger>
