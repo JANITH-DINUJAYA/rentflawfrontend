@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
   BarChart3,
@@ -9,9 +9,11 @@ import {
   DollarSign,
   AlertCircle,
   Building2,
-  Download
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/lib/api";
 
 /* ─── Tiny bar chart rendered via CSS ──────── */
 function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
@@ -29,31 +31,90 @@ function MiniBar({ value, max, color }: { value: number; max: number; color: str
   );
 }
 
-const INCOME_DATA = [
-  { month: "Feb", income: 3200 },
-  { month: "Mar", income: 4800 },
-  { month: "Apr", income: 4500 },
-  { month: "May", income: 5200 },
-  { month: "Jun", income: 4900 },
-  { month: "Jul", income: 5600 }
-];
-
-const OVERDUE_TENANTS = [
-  { name: "John Smith", property: "Greenwood Residence", room: "101", amount: 450, daysPast: 12 },
-  { name: "Ray Morales", property: "City Center Hostels", room: "310", amount: 600, daysPast: 7 },
-  { name: "Nina Reyes", property: "Greenwood Residence", room: "204", amount: 550, daysPast: 3 }
-];
-
-const PROPERTY_STATS = [
-  { name: "Greenwood Residence", total: 24, occupied: 20, revenue: 9000 },
-  { name: "City Center Hostels", total: 30, occupied: 22, revenue: 13200 },
-  { name: "Bay Avenue Suites", total: 10, occupied: 6, revenue: 4200 }
-];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function ReportsPage() {
-  const maxIncome = Math.max(...INCOME_DATA.map(d => d.income));
-  const totalIncome = INCOME_DATA.reduce((s, d) => s + d.income, 0);
-  const totalOverdue = OVERDUE_TENANTS.reduce((s, t) => s + t.amount, 0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Aggregated data states
+  const [occupancy, setOccupancy] = useState<any>(null);
+  const [overdueData, setOverdueData] = useState<any>(null);
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [incomeMonths, setIncomeMonths] = useState<{ month: string; income: number }[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const now = new Date();
+      // Build last 6 months list
+      const last6: { month: number; year: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        last6.push({ month: d.getMonth() + 1, year: d.getFullYear() });
+      }
+
+      const [occupancyRes, overdueRes, tenantsRes, propertiesRes, ...incomeResults] = await Promise.all([
+        api.get("/reports/occupancy"),
+        api.get("/reports/overdue"),
+        api.get("/reports/tenants"),
+        api.get("/properties"),
+        ...last6.map(({ month, year }) => api.get(`/reports/income?month=${month}&year=${year}`))
+      ]);
+
+      setOccupancy(occupancyRes.data);
+      setOverdueData(overdueRes.data);
+      setTenants(Array.isArray(tenantsRes.data) ? tenantsRes.data : []);
+      setProperties(Array.isArray(propertiesRes.data) ? propertiesRes.data : []);
+
+      const months = last6.map((item, i) => ({
+        month: MONTH_NAMES[item.month - 1],
+        income: incomeResults[i]?.data?.totalIncome || 0
+      }));
+      setIncomeMonths(months);
+    } catch {
+      setError("Failed to load report data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+          <AlertCircle className="h-10 w-10 text-destructive" />
+          <p className="text-sm font-semibold">{error}</p>
+          <button onClick={fetchAll} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer">
+            <RefreshCw className="h-3.5 w-3.5" /> Retry
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const maxIncome = Math.max(...incomeMonths.map(d => d.income), 1);
+  const totalIncome = incomeMonths.reduce((s, d) => s + d.income, 0);
+  const totalOverdue = overdueData?.totalOverdue || 0;
+  const overdueList = Array.isArray(overdueData?.overdueInvoices) ? overdueData.overdueInvoices : [];
+  const occupancyPct = occupancy?.occupancyRate || 0;
+  const totalTenants = tenants.length;
 
   return (
     <DashboardLayout>
@@ -63,8 +124,11 @@ export default function ReportsPage() {
           <h2 className="text-2xl font-bold tracking-tight">Reports & Analytics</h2>
           <p className="text-sm text-muted-foreground">Financial performance, occupancy status, and overdue summaries.</p>
         </div>
-        <button className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl border border-border bg-card hover:bg-accent/50 text-foreground transition-all duration-200 active:scale-95">
-          <Download className="h-4 w-4" /> Export PDF
+        <button
+          onClick={fetchAll}
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl border border-border bg-card hover:bg-accent/50 text-foreground transition-all duration-200 active:scale-95 cursor-pointer"
+        >
+          <RefreshCw className="h-4 w-4" /> Refresh
         </button>
       </div>
 
@@ -72,9 +136,9 @@ export default function ReportsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "6-Month Income", value: `$${totalIncome.toLocaleString()}`, icon: DollarSign, color: "text-emerald-500 bg-emerald-500/10" },
-          { label: "Total Tenants", value: "48", icon: Users, color: "text-sky-500 bg-sky-500/10" },
-          { label: "Overdue Balance", value: `$${totalOverdue.toLocaleString()}`, icon: AlertCircle, color: "text-destructive bg-destructive/10" },
-          { label: "Overall Occupancy", value: "74%", icon: Building2, color: "text-violet-500 bg-violet-500/10" }
+          { label: "Active Tenants", value: String(totalTenants), icon: Users, color: "text-sky-500 bg-sky-500/10" },
+          { label: "Overdue Balance", value: `$${Number(totalOverdue).toLocaleString()}`, icon: AlertCircle, color: "text-destructive bg-destructive/10" },
+          { label: "Overall Occupancy", value: `${Math.round(occupancyPct)}%`, icon: Building2, color: "text-violet-500 bg-violet-500/10" }
         ].map(kpi => {
           const Icon = kpi.icon;
           return (
@@ -104,14 +168,18 @@ export default function ReportsPage() {
             <span className="text-xs text-muted-foreground">Last 6 months</span>
           </CardHeader>
           <CardContent className="space-y-3 pt-2">
-            {INCOME_DATA.map(d => (
-              <div key={d.month} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-muted-foreground w-8 text-right">{d.month}</span>
-                <div className="flex-1">
-                  <MiniBar value={d.income} max={maxIncome} color="bg-primary" />
+            {incomeMonths.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">No income data for the last 6 months.</p>
+            ) : (
+              incomeMonths.map(d => (
+                <div key={d.month} className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-muted-foreground w-8 text-right">{d.month}</span>
+                  <div className="flex-1">
+                    <MiniBar value={d.income} max={maxIncome} color="bg-primary" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -119,63 +187,110 @@ export default function ReportsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-destructive" /> Overdue Tenants
+              <AlertCircle className="h-4 w-4 text-destructive" /> Overdue Invoices
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-2">
-            {OVERDUE_TENANTS.map(t => (
-              <div key={t.name} className="flex items-start gap-3 p-3 rounded-xl bg-destructive/5 border border-destructive/10">
-                <div className="h-8 w-8 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center font-bold text-xs flex-shrink-0">
-                  {t.name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold truncate">{t.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{t.property} · Rm {t.room}</p>
-                  <p className="text-[10px] text-destructive font-semibold mt-0.5">{t.daysPast} days overdue</p>
-                </div>
-                <span className="text-sm font-black text-destructive whitespace-nowrap">${t.amount}</span>
+            {overdueList.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">No overdue invoices. All caught up!</p>
+            ) : (
+              overdueList.map((inv: any) => {
+                const tenantName = inv.agreement?.tenant
+                  ? `${inv.agreement.tenant.first_name} ${inv.agreement.tenant.last_name}`
+                  : "Unknown Tenant";
+                const daysPast = Math.floor((Date.now() - new Date(inv.due_date).getTime()) / 86400000);
+                return (
+                  <div key={inv.id} className="flex items-start gap-3 p-3 rounded-xl bg-destructive/5 border border-destructive/10">
+                    <div className="h-8 w-8 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      {tenantName[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold truncate">{tenantName}</p>
+                      <p className="text-[10px] text-muted-foreground">{inv.agreement?.property?.name || "—"}</p>
+                      <p className="text-[10px] text-destructive font-semibold mt-0.5">{daysPast} days overdue</p>
+                    </div>
+                    <span className="text-sm font-black text-destructive whitespace-nowrap">${Number(inv.total_due).toFixed(0)}</span>
+                  </div>
+                );
+              })
+            )}
+            {overdueList.length > 0 && (
+              <div className="text-center text-xs text-muted-foreground pt-1 border-t border-border">
+                Total overdue: <span className="font-bold text-destructive">${Number(totalOverdue).toLocaleString()}</span>
               </div>
-            ))}
-            <div className="text-center text-xs text-muted-foreground pt-1 border-t border-border">
-              Total overdue: <span className="font-bold text-destructive">${totalOverdue}</span>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Property Breakdown */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" /> Property Occupancy Breakdown
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <div className="space-y-5">
-            {PROPERTY_STATS.map(p => {
-              const pct = Math.round((p.occupied / p.total) * 100);
-              return (
-                <div key={p.name} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <p className="font-semibold">{p.name}</p>
-                    <div className="flex items-center gap-4 text-muted-foreground text-xs">
-                      <span>{p.occupied}/{p.total} rooms</span>
-                      <span className="font-bold text-foreground">${p.revenue.toLocaleString()}/mo</span>
-                      <span className={`font-black ${pct >= 75 ? "text-emerald-500" : pct >= 50 ? "text-amber-500" : "text-destructive"}`}>{pct}%</span>
+      {/* Property Breakdown from properties */}
+      {properties.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" /> Property Occupancy Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="space-y-5">
+              {properties.map((p: any) => {
+                const totalRooms = p._count?.rooms || p.rooms?.length || 0;
+                const occupied = p._count?.agreements || 0;
+                const pct = totalRooms > 0 ? Math.round((occupied / totalRooms) * 100) : 0;
+                return (
+                  <div key={p.id} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <p className="font-semibold">{p.name}</p>
+                      <div className="flex items-center gap-4 text-muted-foreground text-xs">
+                        <span>{occupied}/{totalRooms} rooms</span>
+                        <span className={`font-black ${pct >= 75 ? "text-emerald-500" : pct >= 50 ? "text-amber-500" : "text-destructive"}`}>{pct}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-muted/40 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-destructive"}`}
+                        style={{ width: `${pct}%` }}
+                      />
                     </div>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-muted/40 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ${pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-destructive"}`}
-                      style={{ width: `${pct}%` }}
-                    />
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Active Tenants table */}
+      {tenants.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" /> Active Tenants Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="space-y-2">
+              {tenants.slice(0, 10).map((t: any, i: number) => (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px]">
+                      {t.tenantName?.[0] || "?"}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{t.tenantName}</p>
+                      <p className="text-muted-foreground">{t.propertyName} · Rm {t.roomNumber}</p>
+                    </div>
                   </div>
+                  <span className="font-bold text-foreground">${Number(t.rentAmount).toFixed(0)}/mo</span>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+              {tenants.length > 10 && (
+                <p className="text-xs text-center text-muted-foreground pt-2">+{tenants.length - 10} more tenants</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </DashboardLayout>
   );
 }

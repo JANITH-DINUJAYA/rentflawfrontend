@@ -121,7 +121,7 @@ export default function FloorsPage() {
             <SelectValue placeholder={propsLoading ? "Loading..." : "Select property"} />
           </SelectTrigger>
           <SelectContent>
-            {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            {properties.map(p => <SelectItem key={p.id} value={p.id}>{`${p.name}`}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -204,7 +204,7 @@ export default function FloorsPage() {
               <Select value={formPropertyId} onValueChange={v => { if (v) setFormPropertyId(v); }}>
                 <SelectTrigger><SelectValue placeholder="Choose a property" /></SelectTrigger>
                 <SelectContent>
-                  {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  {properties.map(p => <SelectItem key={p.id} value={p.id}>{`${p.name}`}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

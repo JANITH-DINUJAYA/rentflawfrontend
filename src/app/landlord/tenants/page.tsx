@@ -1,74 +1,236 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Users, PlusCircle, Search, Mail, Phone, Calendar, UserCheck, AlertTriangle } from "lucide-react";
+import {
+  Users, PlusCircle, Search, Mail, Phone, Building, CheckCircle, Clock, XCircle, AlertCircle, Loader2, Check
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { api } from "@/lib/api";
 
-interface Tenant {
+type TenantStatus = "ACTIVE" | "INVITED" | "ENDED";
+
+interface TenantRecord {
   id: string;
   name: string;
   email: string;
   phone: string;
+  tenantCode: string;
   propertyName: string;
   roomNumber: string;
-  joinDate: string;
-  status: "ACTIVE" | "INVITED" | "ENDED";
+  status: TenantStatus;
+  agreementId?: string;
+  rentAmount?: number;
 }
 
-const SAMPLE_TENANTS: Tenant[] = [
-  { id: "TNT-001", name: "Alice Vance", email: "alice@gmail.com", phone: "+1 (555) 019-2834", propertyName: "Greenwood Residence", roomNumber: "102", joinDate: "2026-01-01", status: "ACTIVE" },
-  { id: "TNT-002", name: "Marcus Brody", email: "marcus.brody@univ.edu", phone: "+1 (555) 014-9988", propertyName: "City Center Hostels", roomNumber: "205", joinDate: "2026-03-15", status: "ACTIVE" },
-  { id: "TNT-003", name: "David Miller", email: "david.miller@gmail.com", phone: "+1 (555) 012-7744", propertyName: "Greenwood Residence", roomNumber: "108", joinDate: "—", status: "INVITED" },
-  { id: "TNT-004", name: "John Smith", email: "john.smith@gmail.com", phone: "+1 (555) 011-2233", propertyName: "Greenwood Residence", roomNumber: "101", joinDate: "2025-06-01", status: "ENDED" }
-];
+const emptyInviteForm = {
+  tenantCode: "",
+  propertyId: "",
+  roomId: "",
+  rentAmount: "",
+  securityDeposit: "",
+  startDate: "",
+  endDate: "",
+  collectionDay: "1",
+  gracePeriodDays: "3",
+  lateFeeFlat: "0",
+  leavingOption: "PAY_STAY_DATES",
+  leavingRule: ""
+};
 
 export default function TenantsPage() {
-  const [tenants, setTenants] = React.useState<Tenant[]>(SAMPLE_TENANTS);
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
-  const [showInvite, setShowInvite] = React.useState(false);
+  const [tenants, setTenants] = useState<TenantRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
-  // Invite Form State
-  const [form, setForm] = React.useState({
-    name: "",
-    email: "",
-    phone: "",
-    propertyName: "Greenwood Residence",
-    roomNumber: ""
-  });
+  // Invite Dialog State
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteForm, setInviteForm] = useState(emptyInviteForm);
+  const [verifiedTenant, setVerifiedTenant] = useState<any>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [inviteSaving, setInviteSaving] = useState(false);
+  const [inviteError, setInviteError] = useState("");
 
-  const handleInvite = (e: React.FormEvent) => {
+  // Lists for selection
+  const [properties, setProperties] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
+
+  const fetchTenants = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [tenantsRes, agreementsRes, propertiesRes, roomsRes] = await Promise.all([
+        api.get("/tenants/my-tenants"),
+        api.get("/agreements"),
+        api.get("/properties"),
+        api.get("/rooms"),
+      ]);
+
+      setProperties(Array.isArray(propertiesRes.data) ? propertiesRes.data : []);
+      setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : []);
+
+      const list: TenantRecord[] = [];
+      const seenIds = new Set<string>();
+
+      // 1. Add Active tenants
+      if (Array.isArray(tenantsRes.data)) {
+        tenantsRes.data.forEach((t: any) => {
+          const activeAgreement = t.rental_agreements?.find((a: any) => a.status === "ACTIVE");
+          list.push({
+            id: t.id,
+            name: `${t.first_name} ${t.last_name}`,
+            email: t.email,
+            phone: t.phone || "—",
+            tenantCode: t.tenant_code || "—",
+            propertyName: activeAgreement?.property?.name || "No Property",
+            roomNumber: activeAgreement?.room?.room_number || "—",
+            status: "ACTIVE",
+            agreementId: activeAgreement?.id,
+            rentAmount: activeAgreement ? Number(activeAgreement.rent_amount) : undefined
+          });
+          seenIds.add(t.id);
+        });
+      }
+
+      // 2. Add Invited tenants (Draft agreements) and Ended tenants
+      if (Array.isArray(agreementsRes.data)) {
+        agreementsRes.data.forEach((agr: any) => {
+          if (agr.status === "DRAFT") {
+            list.push({
+              id: agr.tenant?.id || agr.id,
+              name: agr.tenant ? `${agr.tenant.first_name} ${agr.tenant.last_name}` : "Invited Tenant",
+              email: agr.tenant?.email || "—",
+              phone: agr.tenant?.phone || "—",
+              tenantCode: agr.tenant?.tenant_code || "—",
+              propertyName: agr.property?.name || "—",
+              roomNumber: agr.room?.room_number || "—",
+              status: "INVITED",
+              agreementId: agr.id,
+              rentAmount: Number(agr.rent_amount)
+            });
+          } else if (agr.status === "TERMINATED" || agr.status === "EXPIRED") {
+            // Only add ended if they are not already seen in active list
+            if (agr.tenant && !seenIds.has(agr.tenant.id)) {
+              list.push({
+                id: agr.tenant.id,
+                name: `${agr.tenant.first_name} ${agr.tenant.last_name}`,
+                email: agr.tenant.email,
+                phone: agr.tenant.phone || "—",
+                tenantCode: agr.tenant.tenant_code || "—",
+                propertyName: agr.property?.name || "—",
+                roomNumber: agr.room?.room_number || "—",
+                status: "ENDED",
+                agreementId: agr.id,
+                rentAmount: Number(agr.rent_amount)
+              });
+            }
+          }
+        });
+      }
+
+      setTenants(list);
+    } catch {
+      setError("Failed to load tenant and property listings.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTenants();
+  }, []);
+
+  const handleVerifyTenant = async () => {
+    if (!inviteForm.tenantCode.trim()) {
+      setVerifyError("Please enter a tenant code.");
+      return;
+    }
+    setVerifying(true);
+    setVerifyError("");
+    setVerifiedTenant(null);
+    try {
+      const res = await api.get(`/users/search/tenant/${inviteForm.tenantCode.trim().toUpperCase()}`);
+      if (!res.data) {
+        setVerifyError("Tenant code not found. Make sure the tenant is registered.");
+      } else {
+        setVerifiedTenant(res.data);
+      }
+    } catch (err: any) {
+      setVerifyError(err?.response?.data?.message || "Invalid tenant code.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim()) return;
+    if (!verifiedTenant || !inviteForm.propertyId || !inviteForm.roomId || !inviteForm.rentAmount || !inviteForm.startDate || !inviteForm.endDate) {
+      setInviteError("Please fill all required lease settings.");
+      return;
+    }
 
-    const newTenant: Tenant = {
-      id: `TNT-${String(tenants.length + 1).padStart(3, "0")}`,
-      name: form.name,
-      email: form.email,
-      phone: form.phone || "—",
-      propertyName: form.propertyName,
-      roomNumber: form.roomNumber || "TBD",
-      joinDate: "—",
-      status: "INVITED"
-    };
+    setInviteSaving(true);
+    setInviteError("");
+    try {
+      await api.post("/agreements", {
+        tenant_id: verifiedTenant.id,
+        property_id: inviteForm.propertyId,
+        room_id: inviteForm.roomId,
+        rent_amount: parseFloat(inviteForm.rentAmount),
+        security_deposit: parseFloat(inviteForm.securityDeposit || inviteForm.rentAmount),
+        start_date: new Date(inviteForm.startDate),
+        end_date: new Date(inviteForm.endDate),
+        collection_day: parseInt(inviteForm.collectionDay),
+        grace_period_days: parseInt(inviteForm.gracePeriodDays),
+        late_fee_flat: parseFloat(inviteForm.lateFeeFlat || "0"),
+        leaving_option: inviteForm.leavingOption,
+        leaving_rule: inviteForm.leavingOption === "DECIDE_IN_AGREEMENT" ? inviteForm.leavingRule : undefined
+      });
 
-    setTenants([newTenant, ...tenants]);
-    setShowInvite(false);
-    setForm({ name: "", email: "", phone: "", propertyName: "Greenwood Residence", roomNumber: "" });
+      setShowInvite(false);
+      setInviteForm(emptyInviteForm);
+      setVerifiedTenant(null);
+      await fetchTenants();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setInviteError(Array.isArray(msg) ? msg[0] : msg || "Failed to create lease invitation.");
+    } finally {
+      setInviteSaving(false);
+    }
+  };
+
+  const handlePropertyChange = (propertyId: string) => {
+    setInviteForm(f => ({ ...f, propertyId, roomId: "" }));
+  };
+
+  const handleRoomChange = (roomId: string) => {
+    const r = rooms.find(room => room.id === roomId);
+    setInviteForm(f => ({
+      ...f,
+      roomId,
+      rentAmount: r ? String(r.base_rent) : "",
+      securityDeposit: r ? String(r.base_rent) : ""
+    }));
   };
 
   const filtered = tenants.filter(t => {
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          t.email.toLowerCase().includes(searchQuery.toLowerCase());
+                          t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          t.tenantCode.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "ALL" || t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const availableRooms = rooms.filter(r => r.floor?.property_id === inviteForm.propertyId);
 
   return (
     <DashboardLayout>
@@ -79,8 +241,8 @@ export default function TenantsPage() {
           <p className="text-sm text-muted-foreground">Manage active tenants, send invites to new occupants, and review lease links.</p>
         </div>
         <button
-          onClick={() => setShowInvite(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all duration-200 active:scale-95"
+          onClick={() => { setShowInvite(true); setInviteError(""); setVerifyError(""); setVerifiedTenant(null); setInviteForm(emptyInviteForm); }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all duration-200 active:scale-95 cursor-pointer"
         >
           <PlusCircle className="h-4 w-4" /> Invite Tenant
         </button>
@@ -91,7 +253,7 @@ export default function TenantsPage() {
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search tenant name or email..."
+            placeholder="Search tenant name, email or code..."
             className="pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -105,7 +267,7 @@ export default function TenantsPage() {
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 cursor-pointer ${
                   isActive
                     ? "bg-primary text-primary-foreground border-primary shadow-md"
                     : "bg-card border-border text-muted-foreground hover:bg-accent/40"
@@ -119,153 +281,328 @@ export default function TenantsPage() {
       </div>
 
       {/* Tenants Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Contact Information</TableHead>
-                <TableHead>Property & Unit</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Lease Started</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((tenant) => (
-                <TableRow key={tenant.id} className="hover:bg-accent/20 transition-colors">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                        {tenant.name[0]}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">{tenant.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono">{tenant.id}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-xs space-y-0.5">
-                      <p className="flex items-center gap-1.5 text-muted-foreground">
-                        <Mail className="h-3.5 w-3.5" /> {tenant.email}
-                      </p>
-                      {tenant.phone !== "—" && (
-                        <p className="flex items-center gap-1.5 text-muted-foreground">
-                          <Phone className="h-3.5 w-3.5" /> {tenant.phone}
-                        </p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-xs">
-                      <p className="font-semibold">{tenant.propertyName}</p>
-                      <p className="text-muted-foreground">Rm {tenant.roomNumber}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {tenant.status === "ACTIVE" ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold">
-                        <UserCheck className="mr-1 h-3.5 w-3.5" /> Active
-                      </Badge>
-                    ) : tenant.status === "INVITED" ? (
-                      <Badge className="bg-amber-500/10 text-amber-500 border-none font-bold animate-pulse">
-                        <Mail className="mr-1 h-3.5 w-3.5" /> Invited
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-muted text-muted-foreground border-none font-bold">
-                        Ended
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {tenant.joinDate}
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : error ? (
+        <div className="flex flex-col items-center py-20 gap-3">
+          <AlertCircle className="h-9 w-9 text-destructive" />
+          <p className="text-sm font-semibold">{error}</p>
+          <button onClick={fetchTenants} className="text-primary hover:underline text-xs">Retry</button>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    No tenants found matching criteria.
-                  </TableCell>
+                  <TableHead>Tenant</TableHead>
+                  <TableHead>Contact Information</TableHead>
+                  <TableHead>Property & Unit</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Monthly Rent</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                      No tenants found matching these filters.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((tenant) => (
+                    <TableRow key={tenant.id} className="hover:bg-accent/20 transition-colors">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+                            {tenant.name[0]}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">{tenant.name}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono">Code: {tenant.tenantCode}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs space-y-0.5">
+                          <p className="flex items-center gap-1.5 text-muted-foreground">
+                            <Mail className="h-3.5 w-3.5" /> {tenant.email}
+                          </p>
+                          {tenant.phone !== "—" && (
+                            <p className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3.5 w-3.5" /> {tenant.phone}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs">
+                          <p className="font-semibold text-foreground">{tenant.propertyName}</p>
+                          <p className="text-muted-foreground">Room {tenant.roomNumber}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {tenant.status === "ACTIVE" ? (
+                          <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border-none font-bold text-[9px] flex items-center gap-1 w-fit">
+                            <CheckCircle className="h-3 w-3" /> Active
+                          </Badge>
+                        ) : tenant.status === "INVITED" ? (
+                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-none font-bold text-[9px] flex items-center gap-1 w-fit">
+                            <Clock className="h-3 w-3" /> Invited
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-gray-500/10 text-gray-500 border-none font-bold text-[9px] flex items-center gap-1 w-fit">
+                            <XCircle className="h-3 w-3" /> Ended
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm font-semibold">
+                        {tenant.rentAmount !== undefined ? `$${tenant.rentAmount.toFixed(2)}` : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Invite Tenant Dialog */}
       <Dialog open={showInvite} onOpenChange={setShowInvite}>
-        <DialogContent className="sm:max-w-[440px]">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Invite New Tenant</DialogTitle>
-            <DialogDescription>Send a login invitation link to register a tenant profile under your properties.</DialogDescription>
+            <DialogTitle className="text-base font-extrabold">Invite New Tenant</DialogTitle>
+            <DialogDescription>Assign a tenant to a room and configure their lease billing options.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleInvite} className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="tenantName">Full Name</Label>
-              <Input
-                id="tenantName"
-                placeholder="e.g. Alice Vance"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
+
+          {inviteError && (
+            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{inviteError}</span>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="tenantEmail">Email Address</Label>
-              <Input
-                id="tenantEmail"
-                type="email"
-                placeholder="alice@example.com"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="tenantPhone">Phone Number (Optional)</Label>
-              <Input
-                id="tenantPhone"
-                placeholder="+1 (555) 000-0000"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="propertySelect">Target Property</Label>
+          )}
+
+          {/* STEP 1: Verify tenant code */}
+          <div className="space-y-4 pt-2">
+            <div className="flex gap-2 items-end">
+              <div className="space-y-1.5 flex-1">
+                <Label htmlFor="t-code">Tenant Verification Code</Label>
                 <Input
-                  id="propertySelect"
-                  value={form.propertyName}
-                  disabled
+                  id="t-code"
+                  placeholder="e.g. T-AVA-001"
+                  value={inviteForm.tenantCode}
+                  onChange={e => setInviteForm({ ...inviteForm, tenantCode: e.target.value })}
+                  disabled={verifiedTenant !== null}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="roomUnit">Room / Unit</Label>
-                <Input
-                  id="roomUnit"
-                  placeholder="e.g. 102"
-                  value={form.roomNumber}
-                  onChange={(e) => setForm({ ...form, roomNumber: e.target.value })}
-                />
+              {verifiedTenant ? (
+                <button
+                  type="button"
+                  onClick={() => { setVerifiedTenant(null); setInviteForm({ ...inviteForm, tenantCode: "" }); }}
+                  className="px-3 h-8 text-xs font-bold rounded-lg border border-border hover:bg-accent/40 cursor-pointer"
+                >
+                  Change
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleVerifyTenant}
+                  disabled={verifying}
+                  className="px-4 h-8 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                >
+                  {verifying && <Loader2 className="h-3 w-3 animate-spin" />}
+                  Verify
+                </button>
+              )}
+            </div>
+
+            {verifyError && <p className="text-[11px] text-destructive font-medium">{verifyError}</p>}
+
+            {verifiedTenant && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-600 font-semibold">
+                <Check className="h-4 w-4" />
+                <span>Verified: {verifiedTenant.first_name} {verifiedTenant.last_name} ({verifiedTenant.email})</span>
               </div>
-            </div>
-            <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10 text-[11px] text-muted-foreground">
-              <AlertTriangle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-              <p>Inviting this tenant will generate a registration code and dispatch an invitation email containing setup instructions.</p>
-            </div>
-            <button
-              type="submit"
-              className="w-full py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
-            >
-              Send Registration Invite
-            </button>
-          </form>
+            )}
+
+            {/* STEP 2: Configure Lease (Visible only after verification) */}
+            {verifiedTenant && (
+              <form onSubmit={handleInviteSubmit} className="space-y-4 pt-2 border-t border-border">
+                {/* Property selector */}
+                <div className="space-y-1.5">
+                  <Label>Assign Property</Label>
+                  <Select value={inviteForm.propertyId} onValueChange={handlePropertyChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{`${p.name}`}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Room selector */}
+                <div className="space-y-1.5">
+                  <Label>Select Room</Label>
+                  <Select value={inviteForm.roomId} onValueChange={handleRoomChange} disabled={!inviteForm.propertyId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose room" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableRooms.length === 0 ? (
+                        <SelectItem value="_none" disabled>No rooms on this property</SelectItem>
+                      ) : (
+                        availableRooms.map(r => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {`Room ${r.room_number} (${r.occupancy_type}) - $${Number(r.base_rent).toFixed(2)}`}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Pricing Fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="rentAmt">Monthly Rent ($)</Label>
+                    <Input
+                      id="rentAmt"
+                      type="number"
+                      placeholder="0.00"
+                      value={inviteForm.rentAmount}
+                      onChange={e => setInviteForm({ ...inviteForm, rentAmount: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="depositAmt">Security Deposit ($)</Label>
+                    <Input
+                      id="depositAmt"
+                      type="number"
+                      placeholder="0.00"
+                      value={inviteForm.securityDeposit}
+                      onChange={e => setInviteForm({ ...inviteForm, securityDeposit: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Lease Dates */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={inviteForm.startDate}
+                      onChange={e => setInviteForm({ ...inviteForm, startDate: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="endDate">End Date</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={inviteForm.endDate}
+                      onChange={e => setInviteForm({ ...inviteForm, endDate: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Collection Config */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="colDay">Due Day</Label>
+                    <Input
+                      id="colDay"
+                      type="number"
+                      min="1"
+                      max="28"
+                      value={inviteForm.collectionDay}
+                      onChange={e => setInviteForm({ ...inviteForm, collectionDay: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="graceP">Grace (Days)</Label>
+                    <Input
+                      id="graceP"
+                      type="number"
+                      min="0"
+                      value={inviteForm.gracePeriodDays}
+                      onChange={e => setInviteForm({ ...inviteForm, gracePeriodDays: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lateFee">Late Fee ($)</Label>
+                    <Input
+                      id="lateFee"
+                      type="number"
+                      min="0"
+                      value={inviteForm.lateFeeFlat}
+                      onChange={e => setInviteForm({ ...inviteForm, lateFeeFlat: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Leaving options */}
+                <div className="space-y-1.5">
+                  <Label>Leaving / Checkout Option</Label>
+                  <Select value={inviteForm.leavingOption} onValueChange={val => setInviteForm({ ...inviteForm, leavingOption: val })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PAY_STAY_DATES">Pay Stay Dates (Prorated)</SelectItem>
+                      <SelectItem value="PAY_FULL_MONTH">Pay Full Month</SelectItem>
+                      <SelectItem value="DECIDE_IN_AGREEMENT">Decide In Agreement</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {inviteForm.leavingOption === "DECIDE_IN_AGREEMENT" && (
+                  <div className="space-y-1.5">
+                    <Label>Active Leaving Rule (for exit month)</Label>
+                    <Select value={inviteForm.leavingRule} onValueChange={val => setInviteForm({ ...inviteForm, leavingRule: val })}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Choose active checkout rule" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PAY_STAY_DATES">Pay Stay Dates (Prorated)</SelectItem>
+                        <SelectItem value="PAY_FULL_MONTH">Pay Full Month</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <DialogFooter className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowInvite(false)}
+                    className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={inviteSaving}
+                    className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    {inviteSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Send Lease Invite
+                  </button>
+                </DialogFooter>
+              </form>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

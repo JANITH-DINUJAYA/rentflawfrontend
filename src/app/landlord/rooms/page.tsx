@@ -214,7 +214,7 @@ export default function RoomsPage() {
                   {floors.length === 0 ? (
                     <SelectItem value="_none" disabled>No floors available — create one first</SelectItem>
                   ) : floors.map(fl => (
-                    <SelectItem key={fl.id} value={fl.id}>{fl.property?.name} / {fl.name}</SelectItem>
+                    <SelectItem key={fl.id} value={fl.id}>{`${fl.property?.name || ""} / ${fl.name}`}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

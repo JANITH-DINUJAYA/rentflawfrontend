@@ -1,16 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
-  DollarSign,
-  Search,
-  CheckCircle2,
-  XCircle,
-  Eye,
-  Clock,
-  AlertCircle,
-  ExternalLink
+  DollarSign, Search, CheckCircle2, XCircle, Eye,
+  Clock, AlertCircle, ExternalLink, Loader2, RefreshCw
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,56 +13,81 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface PaymentSubmission {
-  id: string;
-  tenantName: string;
-  invoiceId: string;
-  propertyName: string;
-  roomNumber: string;
-  amountPaid: number;
-  paymentDate: string;
-  receiptUrl: string;
-  status: "PENDING_REVIEW" | "APPROVED" | "REJECTED";
-  notes?: string;
-}
+import { api } from "@/lib/api";
 
 export default function PaymentsPage() {
-  const [payments, setPayments] = React.useState<PaymentSubmission[]>([
-    { id: "PAY-001", tenantName: "Alice Vance", invoiceId: "INV-001", propertyName: "Greenwood Residence", roomNumber: "102", amountPaid: 450, paymentDate: "2026-07-14", receiptUrl: "#", status: "PENDING_REVIEW" },
-    { id: "PAY-002", tenantName: "Marcus Brody", invoiceId: "INV-002", propertyName: "City Center Hostels", roomNumber: "205", amountPaid: 600, paymentDate: "2026-07-15", receiptUrl: "#", status: "PENDING_REVIEW" },
-    { id: "PAY-003", tenantName: "Clara Oswald", invoiceId: "INV-003", propertyName: "Greenwood Residence", roomNumber: "108", amountPaid: 550, paymentDate: "2026-07-10", receiptUrl: "#", status: "APPROVED" },
-    { id: "PAY-004", tenantName: "John Smith", invoiceId: "INV-004", propertyName: "Greenwood Residence", roomNumber: "101", amountPaid: 300, paymentDate: "2026-07-08", receiptUrl: "#", status: "REJECTED", notes: "Receipt image was blurry and unreadable" }
-  ]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [reviewPayment, setReviewPayment] = React.useState<PaymentSubmission | null>(null);
-  const [rejectNotes, setRejectNotes] = React.useState("");
-  const [showRejectForm, setShowRejectForm] = React.useState(false);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const handleApprove = (id: string) => {
-    setPayments(payments.map(p =>
-      p.id === id ? { ...p, status: "APPROVED" } : p
-    ));
-    setReviewPayment(null);
+  const [reviewPayment, setReviewPayment] = useState<any | null>(null);
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
+
+  const fetchPayments = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.get("/payments/landlord");
+      // Response is an array or paginated object
+      const data = Array.isArray(res.data) ? res.data : (res.data?.submissions || res.data?.data || []);
+      setPayments(data);
+    } catch {
+      setError("Failed to load payment submissions.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = (id: string) => {
+  useEffect(() => { fetchPayments(); }, []);
+
+  const handleApprove = async (id: string) => {
+    setActionLoading(true);
+    setActionError("");
+    try {
+      await api.patch(`/payments/${id}/approve`);
+      setReviewPayment(null);
+      await fetchPayments();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setActionError(Array.isArray(msg) ? msg[0] : msg || "Failed to approve payment.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async (id: string) => {
     if (!rejectNotes.trim()) return;
-    setPayments(payments.map(p =>
-      p.id === id ? { ...p, status: "REJECTED", notes: rejectNotes } : p
-    ));
-    setReviewPayment(null);
-    setRejectNotes("");
-    setShowRejectForm(false);
+    setActionLoading(true);
+    setActionError("");
+    try {
+      await api.patch(`/payments/${id}/reject`, { notes: rejectNotes });
+      setReviewPayment(null);
+      setRejectNotes("");
+      setShowRejectForm(false);
+      await fetchPayments();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setActionError(Array.isArray(msg) ? msg[0] : msg || "Failed to reject payment.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const filtered = payments.filter(p => {
+    const tenantName = p.tenant
+      ? `${p.tenant.first_name} ${p.tenant.last_name}`
+      : "";
+    const invoiceId = p.invoice_id || "";
     const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
     const matchesSearch =
-      p.tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.invoiceId.toLowerCase().includes(searchQuery.toLowerCase());
+      tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoiceId.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -76,21 +95,29 @@ export default function PaymentsPage() {
 
   return (
     <DashboardLayout>
-      {/* ─── Header ───────────────────────────────── */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Payment Submissions</h2>
           <p className="text-sm text-muted-foreground">Review tenant-uploaded payment receipts and approve or reject them.</p>
         </div>
-        {pendingCount > 0 && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 text-sm font-semibold animate-pulse">
-            <Clock className="h-4 w-4" />
-            {pendingCount} pending review{pendingCount > 1 ? "s" : ""}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {pendingCount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 text-sm font-semibold animate-pulse">
+              <Clock className="h-4 w-4" />
+              {pendingCount} pending review{pendingCount > 1 ? "s" : ""}
+            </div>
+          )}
+          <button
+            onClick={fetchPayments}
+            className="p-2.5 rounded-xl border border-border bg-card hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* ─── Filters ──────────────────────────────── */}
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -114,77 +141,97 @@ export default function PaymentsPage() {
         </Select>
       </div>
 
-      {/* ─── Payments Table ────────────────────────── */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Reference</TableHead>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Amount Paid</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((p) => (
-                <TableRow key={p.id} className="hover:bg-accent/20 transition-colors">
-                  <TableCell className="font-bold">{p.id}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm flex-shrink-0">
-                        {p.tenantName[0]}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{p.tenantName}</p>
-                        <p className="text-xs text-muted-foreground">{p.propertyName} · Rm {p.roomNumber}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm font-mono">{p.invoiceId}</TableCell>
-                  <TableCell className="font-bold">${p.amountPaid}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{p.paymentDate}</TableCell>
-                  <TableCell>
-                    {p.status === "APPROVED" ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold">
-                        <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Approved
-                      </Badge>
-                    ) : p.status === "REJECTED" ? (
-                      <Badge className="bg-destructive/10 text-destructive border-none font-bold">
-                        <XCircle className="mr-1 h-3.5 w-3.5" /> Rejected
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-amber-500/10 text-amber-500 border-none font-bold animate-pulse">
-                        <Clock className="mr-1 h-3.5 w-3.5" /> Pending
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <button
-                      onClick={() => { setReviewPayment(p); setShowRejectForm(false); setRejectNotes(""); }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200"
-                    >
-                      <Eye className="h-3.5 w-3.5" /> Review
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+      {/* Payments Table */}
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : error ? (
+        <div className="flex flex-col items-center py-16 gap-3">
+          <AlertCircle className="h-9 w-9 text-destructive" />
+          <p className="text-sm font-semibold">{error}</p>
+          <button onClick={fetchPayments} className="text-primary hover:underline text-xs cursor-pointer">Retry</button>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    No payment submissions match the filters.
-                  </TableCell>
+                  <TableHead>Tenant</TableHead>
+                  <TableHead>Property / Room</TableHead>
+                  <TableHead>Amount Paid</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((p) => {
+                  const tenantName = p.tenant
+                    ? `${p.tenant.first_name} ${p.tenant.last_name}`
+                    : "Unknown Tenant";
+                  const propertyName = p.invoice?.agreement?.property?.name || "—";
+                  const roomNumber = p.invoice?.agreement?.room?.room_number || "—";
+                  return (
+                    <TableRow key={p.id} className="hover:bg-accent/20 transition-colors">
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm flex-shrink-0">
+                            {tenantName[0]}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{tenantName}</p>
+                            <p className="text-xs text-muted-foreground">{p.tenant?.email || "—"}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm font-medium">{propertyName}</p>
+                        <p className="text-xs text-muted-foreground">Rm {roomNumber}</p>
+                      </TableCell>
+                      <TableCell className="font-bold">${Number(p.amount_paid).toFixed(2)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(p.payment_date || p.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {p.status === "APPROVED" ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold">
+                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Approved
+                          </Badge>
+                        ) : p.status === "REJECTED" ? (
+                          <Badge className="bg-destructive/10 text-destructive border-none font-bold">
+                            <XCircle className="mr-1 h-3.5 w-3.5" /> Rejected
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-500/10 text-amber-500 border-none font-bold animate-pulse">
+                            <Clock className="mr-1 h-3.5 w-3.5" /> Pending
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <button
+                          onClick={() => { setReviewPayment(p); setShowRejectForm(false); setRejectNotes(""); setActionError(""); }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200 cursor-pointer"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Review
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      No payment submissions match the filters.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* ─── Review Dialog ─────────────────────────── */}
+      {/* Review Dialog */}
       <Dialog open={reviewPayment !== null} onOpenChange={(open) => !open && setReviewPayment(null)}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
@@ -196,35 +243,59 @@ export default function PaymentsPage() {
 
           {reviewPayment && (
             <div className="space-y-4 py-2">
+              {actionError && (
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" /> {actionError}
+                </div>
+              )}
+
               {/* Payment details */}
               <div className="grid grid-cols-2 gap-3 p-4 bg-accent/20 rounded-xl border border-border text-sm">
                 <div>
                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Tenant</p>
-                  <p className="font-semibold">{reviewPayment.tenantName}</p>
+                  <p className="font-semibold">
+                    {reviewPayment.tenant ? `${reviewPayment.tenant.first_name} ${reviewPayment.tenant.last_name}` : "Unknown"}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Invoice</p>
-                  <p className="font-semibold">{reviewPayment.invoiceId}</p>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Invoice Type</p>
+                  <p className="font-semibold">{reviewPayment.invoice?.type || "—"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Amount Paid</p>
-                  <p className="font-bold text-lg">${reviewPayment.amountPaid}</p>
+                  <p className="font-bold text-lg">${Number(reviewPayment.amount_paid).toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Invoice Total Due</p>
+                  <p className="font-semibold">${Number(reviewPayment.invoice?.total_due || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Payment Date</p>
-                  <p className="font-semibold">{reviewPayment.paymentDate}</p>
+                  <p className="font-semibold">{new Date(reviewPayment.payment_date || reviewPayment.created_at).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Reviewed By</p>
+                  <p className="font-semibold">
+                    {reviewPayment.reviewer ? `${reviewPayment.reviewer.first_name} ${reviewPayment.reviewer.last_name}` : "Not yet reviewed"}
+                  </p>
                 </div>
               </div>
 
               {/* Receipt URL */}
-              <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
-                <DollarSign className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground flex-1">Payment receipt attached</span>
-                <a href={reviewPayment.receiptUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
-                  View Receipt <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
+              {reviewPayment.receipt_url && (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  <span className="text-sm text-muted-foreground flex-1">Payment receipt attached</span>
+                  <a
+                    href={reviewPayment.receipt_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    View Receipt <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
 
               {/* Notes if rejected */}
               {reviewPayment.status === "REJECTED" && reviewPayment.notes && (
@@ -254,13 +325,16 @@ export default function PaymentsPage() {
                     <>
                       <button
                         onClick={() => handleApprove(reviewPayment.id)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20 transition-all duration-200"
+                        disabled={actionLoading}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20 transition-all duration-200 cursor-pointer disabled:opacity-60"
                       >
-                        <CheckCircle2 className="h-4 w-4" /> Approve Payment
+                        {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        Approve Payment
                       </button>
                       <button
                         onClick={() => setShowRejectForm(true)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-lg bg-destructive text-destructive-foreground hover:opacity-90 shadow-md shadow-destructive/20 transition-all duration-200"
+                        disabled={actionLoading}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-lg bg-destructive text-destructive-foreground hover:opacity-90 shadow-md shadow-destructive/20 transition-all duration-200 cursor-pointer disabled:opacity-60"
                       >
                         <XCircle className="h-4 w-4" /> Reject
                       </button>
@@ -269,16 +343,17 @@ export default function PaymentsPage() {
                     <>
                       <button
                         onClick={() => setShowRejectForm(false)}
-                        className="px-4 py-2 text-sm font-medium rounded-lg border border-border bg-card text-foreground hover:bg-accent/50 transition-all"
+                        className="px-4 py-2 text-sm font-medium rounded-lg border border-border bg-card text-foreground hover:bg-accent/50 transition-all cursor-pointer"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => handleReject(reviewPayment.id)}
-                        disabled={!rejectNotes.trim()}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-bold rounded-lg bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        disabled={!rejectNotes.trim() || actionLoading}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-bold rounded-lg bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                       >
-                        <XCircle className="h-4 w-4" /> Confirm Rejection
+                        {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                        Confirm Rejection
                       </button>
                     </>
                   )}

@@ -1,37 +1,71 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
-  UploadCloud, FileCheck, AlertCircle, Camera, DollarSign, X
+  UploadCloud, FileCheck, AlertCircle, DollarSign, X, Loader2, CheckCircle2, AlertOctagon, Clock
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { api } from "@/lib/api";
 
-interface SubmittedPayment {
-  id: string;
-  invoiceId: string;
-  amount: number;
-  submittedAt: string;
-  status: "PENDING_REVIEW" | "APPROVED" | "REJECTED";
-  rejectReason?: string;
-}
-
-const MY_PAYMENTS: SubmittedPayment[] = [
-  { id: "PAY-009", invoiceId: "INV-004", amount: 450, submittedAt: "2026-06-15", status: "APPROVED" },
-  { id: "PAY-008", invoiceId: "INV-003", amount: 450, submittedAt: "2026-05-14", status: "APPROVED" },
-  { id: "PAY-007", invoiceId: "INV-002", amount: 480, submittedAt: "2026-04-25", status: "REJECTED", rejectReason: "Receipt amount does not match invoice total" }
-];
+const STATUS_META = {
+  APPROVED: { label: "Approved", color: "text-emerald-500 bg-emerald-500/10", icon: CheckCircle2 },
+  PENDING_REVIEW: { label: "Pending Review", color: "text-amber-500 bg-amber-500/10", icon: Clock },
+  REJECTED: { label: "Rejected", color: "text-destructive bg-destructive/10", icon: AlertOctagon }
+};
 
 export default function TenantSubmitPaymentPage() {
-  const [file, setFile] = React.useState<File | null>(null);
-  const [preview, setPreview] = React.useState<string | null>(null);
-  const [amount, setAmount] = React.useState("");
-  const [invoiceId, setInvoiceId] = React.useState("INV-005");
-  const [submitted, setSubmitted] = React.useState(false);
-  const [dragging, setDragging] = React.useState(false);
-  const fileRef = React.useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+
+  // Form State
+  const [invoiceId, setInvoiceId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const loadData = async () => {
+    try {
+      const [invoicesRes, submissionsRes] = await Promise.all([
+        api.get("/invoices/tenant"),
+        api.get("/payments/tenant"),
+      ]);
+      const allInvoices = Array.isArray(invoicesRes.data?.invoices) ? invoicesRes.data.invoices : [];
+      const unpaid = allInvoices.filter((inv: any) => inv.status === "PENDING" || inv.status === "OVERDUE");
+      setInvoices(unpaid);
+      if (unpaid.length > 0) {
+        setInvoiceId(unpaid[0].id);
+        setAmount(Number(unpaid[0].total_due).toFixed(2));
+      }
+      setSubmissions(Array.isArray(submissionsRes.data) ? submissionsRes.data : []);
+    } catch (err) {
+      console.error("Failed to load invoice lists and submissions history", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleInvoiceChange = (id: string) => {
+    setInvoiceId(id);
+    const selected = invoices.find(inv => inv.id === id);
+    if (selected) {
+      setAmount(Number(selected.total_due).toFixed(2));
+    }
+  };
 
   const handleFileChange = (f: File) => {
     setFile(f);
@@ -46,17 +80,69 @@ export default function TenantSubmitPaymentPage() {
     if (dropped) handleFileChange(dropped);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !amount) return;
-    setSubmitted(true);
+    if (!file || !invoiceId || !amount) {
+      setFormError("Please select an invoice, enter an amount and upload a receipt.");
+      return;
+    }
+    setUploading(true);
+    setFormError("");
+    try {
+      // 1. Upload receipt to Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await api.post("/files/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      const receiptUrl = uploadRes.data?.public_url;
+      if (!receiptUrl) throw new Error("Storage URL missing in response.");
+
+      // 2. Submit payment submission
+      await api.post("/payments/submit", {
+        invoice_id: invoiceId,
+        amount_paid: parseFloat(amount),
+        payment_date: new Date(),
+        receipt_url: receiptUrl
+      });
+
+      setSuccess(true);
+      setFile(null);
+      setPreview(null);
+      
+      // Refresh Lists
+      const [invoicesRes, submissionsRes] = await Promise.all([
+        api.get("/invoices/tenant"),
+        api.get("/payments/tenant"),
+      ]);
+      const allInvoices = Array.isArray(invoicesRes.data?.invoices) ? invoicesRes.data.invoices : [];
+      const unpaid = allInvoices.filter((inv: any) => inv.status === "PENDING" || inv.status === "OVERDUE");
+      setInvoices(unpaid);
+      if (unpaid.length > 0) {
+        setInvoiceId(unpaid[0].id);
+        setAmount(Number(unpaid[0].total_due).toFixed(2));
+      } else {
+        setInvoiceId("");
+        setAmount("");
+      }
+      setSubmissions(Array.isArray(submissionsRes.data) ? submissionsRes.data : []);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setFormError(Array.isArray(msg) ? msg[0] : msg || err.message || "Failed to submit payment receipt.");
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const statusBadge = (status: SubmittedPayment["status"]) => {
-    if (status === "APPROVED") return "bg-emerald-500/10 text-emerald-500";
-    if (status === "REJECTED") return "bg-destructive/10 text-destructive";
-    return "bg-amber-500/10 text-amber-500";
-  };
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -69,7 +155,7 @@ export default function TenantSubmitPaymentPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* ─── Upload form ─────────────────────── */}
         <div className="lg:col-span-3">
-          {submitted ? (
+          {success ? (
             <Card className="border-emerald-500/30 shadow-lg shadow-emerald-500/5">
               <CardContent className="p-8 flex flex-col items-center text-center gap-4">
                 <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
@@ -77,11 +163,11 @@ export default function TenantSubmitPaymentPage() {
                 </div>
                 <h3 className="text-xl font-black">Payment Submitted!</h3>
                 <p className="text-sm text-muted-foreground max-w-xs">
-                  Your receipt for <strong>{invoiceId}</strong> has been submitted for review. You will be notified once it's approved.
+                  Your payment receipt has been submitted for review. You will be notified once it is reviewed.
                 </p>
                 <button
-                  onClick={() => { setSubmitted(false); setFile(null); setPreview(null); setAmount(""); }}
-                  className="mt-2 px-6 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
+                  onClick={() => { setSuccess(false); setFormError(""); }}
+                  className="mt-2 px-6 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all cursor-pointer"
                 >
                   Submit Another
                 </button>
@@ -91,10 +177,34 @@ export default function TenantSubmitPaymentPage() {
             <Card>
               <CardContent className="p-6 space-y-5">
                 <form onSubmit={handleSubmit} className="space-y-5">
+                  {formError && (
+                    <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      <span>{formError}</span>
+                    </div>
+                  )}
+
                   {/* Invoice selector */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="invoiceRef">Invoice Reference</Label>
-                    <Input id="invoiceRef" value={invoiceId} onChange={e => setInvoiceId(e.target.value)} placeholder="INV-005" />
+                    <Label>Select Invoice to Pay</Label>
+                    {invoices.length === 0 ? (
+                      <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-semibold">
+                        All invoices are fully paid! No outstanding balances.
+                      </div>
+                    ) : (
+                      <Select value={invoiceId} onValueChange={handleInvoiceChange}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Choose outstanding invoice" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {invoices.map(inv => (
+                            <SelectItem key={inv.id} value={inv.id}>
+                              {`${inv.type} Invoice (${new Date(inv.due_date).toLocaleDateString()}) - $${Number(inv.total_due).toFixed(2)}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
                   {/* Amount */}
@@ -102,7 +212,17 @@ export default function TenantSubmitPaymentPage() {
                     <Label htmlFor="amountPaid">Amount Paid ($)</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input id="amountPaid" type="number" step="0.01" className="pl-9" placeholder="450.00" value={amount} onChange={e => setAmount(e.target.value)} />
+                      <Input
+                        id="amountPaid"
+                        type="number"
+                        step="0.01"
+                        className="pl-9"
+                        placeholder="0.00"
+                        value={amount}
+                        onChange={e => setAmount(e.target.value)}
+                        disabled={invoices.length === 0}
+                        required
+                      />
                     </div>
                   </div>
 
@@ -124,6 +244,7 @@ export default function TenantSubmitPaymentPage() {
                         accept="image/*,application/pdf"
                         className="hidden"
                         onChange={e => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                        disabled={invoices.length === 0}
                       />
                       {preview ? (
                         <div className="relative">
@@ -132,7 +253,7 @@ export default function TenantSubmitPaymentPage() {
                           <button
                             type="button"
                             onClick={e => { e.stopPropagation(); setFile(null); setPreview(null); }}
-                            className="absolute top-0 right-0 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg"
+                            className="absolute top-0 right-0 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg cursor-pointer"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -145,11 +266,8 @@ export default function TenantSubmitPaymentPage() {
                           </div>
                           <div>
                             <p className="text-sm font-bold">Drop your receipt here</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">or click to browse — JPG, PNG, PDF accepted</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">or click to browse — Images, PDFs accepted</p>
                           </div>
-                          <button type="button" className="mt-1 flex items-center gap-1.5 text-xs font-bold text-primary hover:underline">
-                            <Camera className="h-3.5 w-3.5" /> Choose file
-                          </button>
                         </div>
                       )}
                     </div>
@@ -157,10 +275,17 @@ export default function TenantSubmitPaymentPage() {
 
                   <button
                     type="submit"
-                    disabled={!file || !amount}
-                    className="w-full py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
+                    disabled={uploading || invoices.length === 0 || !file}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20 cursor-pointer"
                   >
-                    Submit for Review
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploading receipt...
+                      </>
+                    ) : (
+                      "Submit Payment Proof"
+                    )}
                   </button>
                 </form>
               </CardContent>
@@ -168,31 +293,51 @@ export default function TenantSubmitPaymentPage() {
           )}
         </div>
 
-        {/* ─── Past submissions ──────────────────── */}
+        {/* ─── Payment history list ──────────────── */}
         <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Past Submissions</h3>
-          {MY_PAYMENTS.map(p => (
-            <Card key={p.id}>
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-mono font-bold">{p.id}</p>
-                    <p className="text-xs text-muted-foreground">{p.invoiceId} · {p.submittedAt}</p>
-                  </div>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${statusBadge(p.status)}`}>
-                    {p.status.replace("_", " ")}
-                  </span>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold">Verification History</CardTitle>
+              <CardDescription className="text-xs">Receipts previously submitted and status</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {submissions.length === 0 ? (
+                <div className="text-center py-10 text-xs text-muted-foreground">
+                  No payment submissions found.
                 </div>
-                <p className="text-xl font-black">${p.amount}</p>
-                {p.status === "REJECTED" && p.rejectReason && (
-                  <div className="flex items-start gap-1.5 text-xs text-destructive bg-destructive/10 rounded-lg p-2">
-                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                    <p>{p.rejectReason}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+              ) : (
+                submissions.map((sub) => {
+                  const m = STATUS_META[sub.status as keyof typeof STATUS_META];
+                  const Icon = m.icon;
+                  return (
+                    <div key={sub.id} className="p-3.5 rounded-xl border border-border bg-card space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold uppercase tracking-wider text-[10px] text-muted-foreground">
+                          {sub.invoice?.type || "Rent"} Payment
+                        </span>
+                        <Badge variant="outline" className={`${m.color} border-none font-bold text-[9px] flex items-center gap-1`}>
+                          <Icon className="h-3 w-3" /> {m.label}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span>Amount Paid:</span>
+                        <span className="font-bold text-foreground">${Number(sub.amount_paid).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <span>Submitted Date:</span>
+                        <span>{new Date(sub.payment_date).toLocaleDateString()}</span>
+                      </div>
+                      {sub.status === "REJECTED" && sub.notes && (
+                        <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive text-[11px] font-semibold border border-destructive/20 mt-1 leading-normal">
+                          <strong>Reason:</strong> {sub.notes}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </DashboardLayout>

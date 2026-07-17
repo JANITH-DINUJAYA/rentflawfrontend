@@ -12,7 +12,8 @@ import {
   Building2,
   BedDouble,
   UploadCloud,
-  Loader2
+  Loader2,
+  Check
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,7 @@ export default function TenantDashboard() {
 
   // Find active agreement
   const activeAgreement = profile?.rental_agreements?.find((a: any) => a.status === "ACTIVE");
+  const pendingAgreement = profile?.rental_agreements?.find((a: any) => a.status === "DRAFT");
   const propertyName = activeAgreement?.property?.name || "No Active Lease";
   const roomNumber = activeAgreement?.room?.room_number || "—";
 
@@ -79,6 +81,44 @@ export default function TenantDashboard() {
 
   return (
     <DashboardLayout>
+      {/* Lease invitation banner */}
+      {pendingAgreement && (
+        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" /> Lease invitation pending
+            </p>
+            <h4 className="font-extrabold text-sm text-foreground">
+              You are invited to join {pendingAgreement.property.name} — Room {pendingAgreement.room.room_number}
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Rent: ${Number(pendingAgreement.rent_amount).toFixed(2)}/mo · Security Deposit: ${Number(pendingAgreement.security_deposit).toFixed(2)}
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                setLoading(true);
+                await api.patch(`/agreements/${pendingAgreement.id}/accept-invitation`);
+                const [profileRes, invoicesRes] = await Promise.all([
+                  api.get("/tenants/profile"),
+                  api.get("/invoices/tenant"),
+                ]);
+                setProfile(profileRes.data);
+                setInvoices(Array.isArray(invoicesRes.data?.invoices) ? invoicesRes.data.invoices : []);
+              } catch (err) {
+                alert("Failed to accept lease invitation.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="px-4 py-2 text-xs font-bold rounded-lg bg-blue-500 hover:bg-blue-600 text-white shadow-md shadow-blue-500/10 transition-all cursor-pointer flex items-center gap-1"
+          >
+            <Check className="h-3.5 w-3.5" /> Accept Invitation
+          </button>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-6 text-white shadow-xl shadow-primary/20">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.12),transparent)] pointer-events-none" />
