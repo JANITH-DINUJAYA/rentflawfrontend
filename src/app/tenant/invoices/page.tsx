@@ -69,6 +69,8 @@ export default function TenantInvoicesPage() {
         throw new Error("PayHere SDK not loaded. Please try again.");
       }
 
+      payhereObj.sandbox = true; // Enable Sandbox Mode
+
       payhereObj.onCompleted = async (orderId: string) => {
         console.log("PayHere Checkout Completed:", orderId);
         try {
@@ -215,6 +217,12 @@ export default function TenantInvoicesPage() {
                         <Badge variant="outline" className="text-[10px] font-bold uppercase border-none bg-accent/60 text-foreground">
                           {inv.type}
                         </Badge>
+                        {inv.utility_bill && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {inv.utility_bill.type} 
+                            {inv.utility_bill.meter_reading_current !== null && ` (${inv.utility_bill.meter_reading_previous} → ${inv.utility_bill.meter_reading_current} @ $${inv.utility_bill.rate_per_unit})`}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">${Number(inv.amount).toFixed(2)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground space-y-0.5">
@@ -313,7 +321,7 @@ export default function TenantInvoicesPage() {
                     <p className="font-bold text-sm flex items-center gap-1.5">
                       Pay Online (PayHere Card Checkout)
                     </p>
-                    <p className="text-[11px] text-muted-foreground">Settle instantly using Visa, Mastercard, or local bank cards.</p>
+                    <p className="text-[11px] text-muted-foreground">Open payment gateway. Requires review and manual approval by landlord.</p>
                   </div>
                 </button>
 
@@ -344,8 +352,8 @@ export default function TenantInvoicesPage() {
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-bold text-sm text-amber-700">Sandbox Direct Settle (Dev Bypass)</p>
-                    <p className="text-[11px] text-amber-600/80">Immediately marks invoice paid without webhook routing.</p>
+                    <p className="font-bold text-sm text-amber-700">Direct Sandbox Payment</p>
+                    <p className="text-[11px] text-amber-600/80">Simulates gateway completion; submits payment for review & manual landlord approval.</p>
                   </div>
                 </button>
               </div>

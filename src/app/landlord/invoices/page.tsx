@@ -210,6 +210,12 @@ export default function InvoicesPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px] font-bold">{inv.type}</Badge>
+                        {inv.utility_bill && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {inv.utility_bill.type} 
+                            {inv.utility_bill.meter_reading_current !== null && ` (${inv.utility_bill.meter_reading_previous} → ${inv.utility_bill.meter_reading_current} @ $${inv.utility_bill.rate_per_unit})`}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs">
                         <p>Amount: ${Number(inv.amount).toFixed(2)}</p>

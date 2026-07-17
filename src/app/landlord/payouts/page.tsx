@@ -191,16 +191,16 @@ export default function PayoutsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="text-xs">
-                            <p className="font-semibold text-destructive">${Number(ref.deduction_amount).toFixed(2)}</p>
-                            {ref.deduction_reason && (
-                              <p className="text-[10px] text-muted-foreground italic truncate max-w-[200px]" title={ref.deduction_reason}>
-                                "{ref.deduction_reason}"
+                            <p className="font-semibold text-destructive">${Number(ref.deductions).toFixed(2)}</p>
+                            {ref.reason && (
+                              <p className="text-[10px] text-muted-foreground italic truncate max-w-[200px]" title={ref.reason}>
+                                "{ref.reason}"
                               </p>
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="text-sm font-extrabold text-emerald-600">
-                          ${Number(ref.final_refund_amount).toFixed(2)}
+                          ${Number(ref.refund_amount).toFixed(2)}
                         </TableCell>
                         <TableCell>
                           {ref.is_paid ? (
@@ -307,7 +307,7 @@ export default function PayoutsPage() {
               <div className="flex justify-between border-t border-emerald-500/10 pt-2 text-sm">
                 <span className="font-bold text-foreground">Total Payout Amount:</span>
                 <span className="font-extrabold text-emerald-600">
-                  ${activeTab === "REFUNDS" ? Number(payoutTarget.final_refund_amount).toFixed(2) : Number(payoutTarget.credit_amount).toFixed(2)}
+                  ${activeTab === "REFUNDS" ? Number(payoutTarget.refund_amount).toFixed(2) : Number(payoutTarget.credit_amount).toFixed(2)}
                 </span>
               </div>
             </div>
