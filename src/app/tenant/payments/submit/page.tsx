@@ -34,7 +34,7 @@ export default function TenantSubmitPaymentPage() {
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const loadData = async () => {
+  const loadData = async (preselectedInvoiceId: string | null) => {
     try {
       const [invoicesRes, submissionsRes] = await Promise.all([
         api.get("/invoices/tenant"),
@@ -43,9 +43,14 @@ export default function TenantSubmitPaymentPage() {
       const allInvoices = Array.isArray(invoicesRes.data?.invoices) ? invoicesRes.data.invoices : [];
       const unpaid = allInvoices.filter((inv: any) => inv.status === "PENDING" || inv.status === "OVERDUE");
       setInvoices(unpaid);
-      if (unpaid.length > 0) {
-        setInvoiceId(unpaid[0].id);
-        setAmount(Number(unpaid[0].total_due).toFixed(2));
+      
+      const targetId = preselectedInvoiceId || (unpaid.length > 0 ? unpaid[0].id : "");
+      if (targetId) {
+        const selected = unpaid.find((inv: any) => inv.id === targetId) || unpaid[0];
+        if (selected) {
+          setInvoiceId(selected.id);
+          setAmount(Number(selected.total_due).toFixed(2));
+        }
       }
       setSubmissions(Array.isArray(submissionsRes.data) ? submissionsRes.data : []);
     } catch (err) {
@@ -56,7 +61,10 @@ export default function TenantSubmitPaymentPage() {
   };
 
   useEffect(() => {
-    loadData();
+    const preselectedInvoiceId = typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("invoice_id")
+      : null;
+    loadData(preselectedInvoiceId);
   }, []);
 
   const handleInvoiceChange = (id: string) => {

@@ -5,7 +5,8 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Search, CreditCard, CheckCircle2, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, Search, CreditCard, CheckCircle2, Clock, AlertCircle, Loader2, Landmark, FileImage, ShieldCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
 import { api } from "@/lib/api";
 
@@ -22,21 +23,96 @@ export default function TenantInvoicesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
+  // Payment selection modal
+  const [paymentTarget, setPaymentTarget] = useState<any | null>(null);
+  const [initiatingPayHere, setInitiatingPayHere] = useState(false);
+  const [payError, setPayError] = useState("");
+
+  const fetchInvoices = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.get("/invoices/tenant");
+      setInvoices(Array.isArray(res.data?.invoices) ? res.data.invoices : []);
+    } catch {
+      setError("Failed to load your invoices.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchInvoices = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await api.get("/invoices/tenant");
-        setInvoices(Array.isArray(res.data?.invoices) ? res.data.invoices : []);
-      } catch {
-        setError("Failed to load your invoices.");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchInvoices();
+
+    // Dynamically inject PayHere SDK
+    const script = document.createElement("script");
+    script.src = "https://www.payhere.lk/lib/payhere.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
   }, []);
+
+  const handlePayHereCheckout = async () => {
+    if (!paymentTarget) return;
+    setInitiatingPayHere(true);
+    setPayError("");
+    try {
+      const res = await api.post("/payments/payhere/initiate", { invoice_id: paymentTarget.id });
+      const payhereParams = res.data;
+
+      // Register PayHere Callbacks
+      const payhereObj = (window as any).payhere;
+      if (!payhereObj) {
+        throw new Error("PayHere SDK not loaded. Please try again.");
+      }
+
+      payhereObj.onCompleted = async (orderId: string) => {
+        console.log("PayHere Checkout Completed:", orderId);
+        try {
+          // Immediately call local bypass endpoint to simulate successful server webhook in local dev environments
+          await api.post("/payments/payhere/local-bypass", { invoice_id: orderId });
+        } catch (webhookErr) {
+          console.error("Local webhook simulation bypass failed", webhookErr);
+        }
+        setPaymentTarget(null);
+        await fetchInvoices();
+      };
+
+      payhereObj.onDismissed = () => {
+        console.log("PayHere Checkout Dismissed");
+      };
+
+      payhereObj.onError = (err: any) => {
+        setPayError(err || "An error occurred with PayHere Sandbox payment.");
+      };
+
+      // Launch PayHere Web Checkout screen
+      payhereObj.startPayment(payhereParams);
+
+    } catch (err: any) {
+      setPayError(err?.response?.data?.message || err?.message || "Failed to initiate payment gateway.");
+    } finally {
+      setInitiatingPayHere(false);
+    }
+  };
+
+  const handleLocalBypassSettle = async () => {
+    if (!paymentTarget) return;
+    setInitiatingPayHere(true);
+    setPayError("");
+    try {
+      await api.post("/payments/payhere/local-bypass", { invoice_id: paymentTarget.id });
+      setPaymentTarget(null);
+      await fetchInvoices();
+    } catch (err: any) {
+      setPayError(err?.response?.data?.message || "Local bypass execution failed.");
+    } finally {
+      setInitiatingPayHere(false);
+    }
+  };
 
   const filtered = invoices.filter(inv => {
     const period = inv.billing_period_start
@@ -162,12 +238,12 @@ export default function TenantInvoicesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         {inv.status !== "PAID" ? (
-                          <Link
-                            href="/tenant/payments/submit"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:bg-primary/95 transition-all shadow-md shadow-primary/10"
+                          <button
+                            onClick={() => { setPaymentTarget(inv); setPayError(""); }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:bg-primary/95 transition-all shadow-md shadow-primary/10 cursor-pointer"
                           >
                             <CreditCard className="h-3 w-3" /> Pay Now
-                          </Link>
+                          </button>
                         ) : (
                           <span className="text-xs text-muted-foreground font-semibold">Cleared</span>
                         )}
@@ -187,6 +263,105 @@ export default function TenantInvoicesPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Choice Payment Dialog */}
+      <Dialog open={paymentTarget !== null} onOpenChange={o => !o && setPaymentTarget(null)}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-primary" /> Settle Invoice</DialogTitle>
+            <DialogDescription>
+              Choose your preferred method to clear this billing cycle.
+            </DialogDescription>
+          </DialogHeader>
+
+          {payError && (
+            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" /> {payError}
+            </div>
+          )}
+
+          {paymentTarget && (
+            <div className="space-y-4 py-2">
+              <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Invoice Type:</span>
+                  <span className="font-bold uppercase">{paymentTarget.type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Billing Period:</span>
+                  <span className="font-bold">
+                    {new Date(paymentTarget.billing_period_start).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-primary/10 pt-2 text-sm">
+                  <span className="font-bold text-foreground">Amount Due:</span>
+                  <span className="font-extrabold text-primary">${Number(paymentTarget.total_due).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {/* Instant Card Payment option */}
+                <button
+                  onClick={handlePayHereCheckout}
+                  disabled={initiatingPayHere}
+                  className="flex items-center gap-4 p-3.5 rounded-xl border border-border hover:border-primary/50 hover:bg-accent/40 text-left transition-all duration-200 cursor-pointer disabled:opacity-60"
+                >
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm flex items-center gap-1.5">
+                      Pay Online (PayHere Card Checkout)
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Settle instantly using Visa, Mastercard, or local bank cards.</p>
+                  </div>
+                </button>
+
+                {/* Manual Slip upload option */}
+                <Link
+                  href={{
+                    pathname: "/tenant/payments/submit",
+                    query: { invoice_id: paymentTarget.id }
+                  }}
+                  className="flex items-center gap-4 p-3.5 rounded-xl border border-border hover:border-primary/50 hover:bg-accent/40 text-left transition-all duration-200 cursor-pointer"
+                >
+                  <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                    <Landmark className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Upload Bank Transfer Receipt</p>
+                    <p className="text-[11px] text-muted-foreground">Submit a screenshot/photo of physical deposit slips manually.</p>
+                  </div>
+                </Link>
+
+                {/* Local Dev instant bypass button */}
+                <button
+                  onClick={handleLocalBypassSettle}
+                  disabled={initiatingPayHere}
+                  className="flex items-center gap-4 p-3.5 rounded-xl border border-dashed border-amber-500/30 hover:border-amber-500/60 bg-amber-500/5 hover:bg-amber-500/10 text-left transition-all duration-200 cursor-pointer disabled:opacity-60"
+                >
+                  <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-amber-700">Sandbox Direct Settle (Dev Bypass)</p>
+                    <p className="text-[11px] text-amber-600/80">Immediately marks invoice paid without webhook routing.</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <button
+              onClick={() => setPaymentTarget(null)}
+              className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
