@@ -27,6 +27,7 @@ export default function TenantInvoicesPage() {
   const [paymentTarget, setPaymentTarget] = useState<any | null>(null);
   const [initiatingPayHere, setInitiatingPayHere] = useState(false);
   const [payError, setPayError] = useState("");
+  const [paymentStatusAlert, setPaymentStatusAlert] = useState<"success" | "cancelled" | null>(null);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -44,15 +45,17 @@ export default function TenantInvoicesPage() {
   useEffect(() => {
     fetchInvoices();
 
-    // Dynamically inject PayHere SDK
-    const script = document.createElement("script");
-    script.src = "https://www.payhere.lk/lib/payhere.js";
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
+    // Check query parameters for payment status return
+    if (typeof window !== "undefined") {
+      const status = new URLSearchParams(window.location.search).get("status");
+      if (status === "success") {
+        setPaymentStatusAlert("success");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (status === "cancelled") {
+        setPaymentStatusAlert("cancelled");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
   }, []);
 
   const handlePayHereCheckout = async () => {
@@ -63,40 +66,25 @@ export default function TenantInvoicesPage() {
       const res = await api.post("/payments/payhere/initiate", { invoice_id: paymentTarget.id });
       const payhereParams = res.data;
 
-      // Register PayHere Callbacks
-      const payhereObj = (window as any).payhere;
-      if (!payhereObj) {
-        throw new Error("PayHere SDK not loaded. Please try again.");
-      }
+      // Submit form programmatically via HTML POST redirection to sandbox checkout
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "https://sandbox.payhere.lk/pay/checkout";
 
-      payhereObj.sandbox = true; // Enable Sandbox Mode
+      Object.keys(payhereParams).forEach((key) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(payhereParams[key]);
+        form.appendChild(input);
+      });
 
-      payhereObj.onCompleted = async (orderId: string) => {
-        console.log("PayHere Checkout Completed:", orderId);
-        try {
-          // Immediately call local bypass endpoint to simulate successful server webhook in local dev environments
-          await api.post("/payments/payhere/local-bypass", { invoice_id: orderId });
-        } catch (webhookErr) {
-          console.error("Local webhook simulation bypass failed", webhookErr);
-        }
-        setPaymentTarget(null);
-        await fetchInvoices();
-      };
-
-      payhereObj.onDismissed = () => {
-        console.log("PayHere Checkout Dismissed");
-      };
-
-      payhereObj.onError = (err: any) => {
-        setPayError(err || "An error occurred with PayHere Sandbox payment.");
-      };
-
-      // Launch PayHere Web Checkout screen
-      payhereObj.startPayment(payhereParams);
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
 
     } catch (err: any) {
       setPayError(err?.response?.data?.message || err?.message || "Failed to initiate payment gateway.");
-    } finally {
       setInitiatingPayHere(false);
     }
   };
@@ -341,7 +329,6 @@ export default function TenantInvoicesPage() {
                     <p className="text-[11px] text-muted-foreground">Submit a screenshot/photo of physical deposit slips manually.</p>
                   </div>
                 </Link>
-
                 {/* Local Dev instant bypass button */}
                 <button
                   onClick={handleLocalBypassSettle}
@@ -352,7 +339,7 @@ export default function TenantInvoicesPage() {
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-bold text-sm text-amber-700">Direct Sandbox Payment</p>
+                    <p className="font-bold text-sm text-amber-700">Direct Payment</p>
                     <p className="text-[11px] text-amber-600/80">Simulates gateway completion; submits payment for review & manual landlord approval.</p>
                   </div>
                 </button>
@@ -366,6 +353,42 @@ export default function TenantInvoicesPage() {
               className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer"
             >
               Cancel
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Redirect Return Alert Dialog */}
+      <Dialog open={paymentStatusAlert !== null} onOpenChange={o => !o && setPaymentStatusAlert(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {paymentStatusAlert === "success" ? (
+                <>
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  <span>Payment Succeeded</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                  <span>Payment Cancelled</span>
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {paymentStatusAlert === "success" ? (
+                "Your card payment transaction was submitted successfully. The landlord has been notified and will verify the payout to clear your invoice."
+              ) : (
+                "The payment gateway checkout was cancelled. No charges were made. You can try checking out again or upload a manual slip."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setPaymentStatusAlert(null)}
+              className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
+            >
+              Okay
             </button>
           </DialogFooter>
         </DialogContent>
