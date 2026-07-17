@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
   DollarSign,
@@ -8,30 +8,17 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  ArrowUpRight,
   CalendarDays,
   Building2,
   BedDouble,
   UploadCloud,
-  LifeBuoy
+  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-interface TenantInvoice {
-  id: string;
-  month: string;
-  amount: number;
-  status: "PAID" | "OVERDUE" | "PENDING";
-  dueDate: string;
-}
-
-const MY_INVOICES: TenantInvoice[] = [
-  { id: "INV-005", month: "July 2026", amount: 450, status: "PENDING", dueDate: "2026-07-20" },
-  { id: "INV-004", month: "June 2026", amount: 450, status: "PAID", dueDate: "2026-06-20" },
-  { id: "INV-003", month: "May 2026", amount: 450, status: "PAID", dueDate: "2026-05-20" },
-  { id: "INV-002", month: "April 2026", amount: 480, status: "OVERDUE", dueDate: "2026-04-20" }
-];
+import { useAuthStore } from "@/store/auth-store";
+import { api } from "@/lib/api";
+import Link from "next/link";
 
 const STATUS_META = {
   PAID: { label: "Paid", color: "text-emerald-500 bg-emerald-500/10", icon: CheckCircle2 },
@@ -40,11 +27,54 @@ const STATUS_META = {
 };
 
 export default function TenantDashboard() {
-  const currentInvoice = MY_INVOICES.find(inv => inv.status === "PENDING" || inv.status === "OVERDUE");
-  const creditBalance = 0;
-  const nextDue = currentInvoice?.dueDate ?? "—";
+  const { user } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [profileRes, invoicesRes] = await Promise.all([
+          api.get("/tenants/profile"),
+          api.get("/invoices/tenant"),
+        ]);
+        setProfile(profileRes.data);
+        setInvoices(Array.isArray(invoicesRes.data?.invoices) ? invoicesRes.data.invoices : []);
+      } catch (err) {
+        console.error("Failed to load tenant dashboard live data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Find active agreement
+  const activeAgreement = profile?.rental_agreements?.find((a: any) => a.status === "ACTIVE");
+  const propertyName = activeAgreement?.property?.name || "No Active Lease";
+  const roomNumber = activeAgreement?.room?.room_number || "—";
+
+  // Filter invoices for outstanding ones
+  const outstandingInvoices = invoices.filter(inv => inv.status === "PENDING" || inv.status === "OVERDUE");
+  // Sort by due date asc to find the nearest/oldest outstanding one
+  const currentInvoice = outstandingInvoices.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0];
+
+  const creditBalance = profile?.credit_amount || 0;
+  const nextDue = currentInvoice ? new Date(currentInvoice.due_date).toLocaleDateString() : "—";
   const daysLeft = currentInvoice
-    ? Math.max(0, Math.ceil((new Date(currentInvoice.dueDate).getTime() - Date.now()) / 86400000))
+    ? Math.max(0, Math.ceil((new Date(currentInvoice.due_date).getTime() - Date.now()) / 86400000))
     : 0;
 
   return (
@@ -55,17 +85,17 @@ export default function TenantDashboard() {
         <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-white/70 mb-0.5">Welcome back 👋</p>
-            <h2 className="text-3xl font-black">Alice Vance</h2>
-            <p className="text-sm text-white/80 mt-1">Tenant code: <span className="font-bold font-mono">T-AVA-001</span></p>
+            <h2 className="text-3xl font-black">{profile?.first_name} {profile?.last_name}</h2>
+            <p className="text-sm text-white/80 mt-1">Tenant code: <span className="font-bold font-mono bg-white/10 px-2 py-0.5 rounded-sm">{profile?.tenant_code || "—"}</span></p>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-2">
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur px-4 py-2 rounded-xl border border-white/20">
               <Building2 className="h-4 w-4" />
-              <p className="text-sm font-bold">Greenwood Residence</p>
+              <p className="text-sm font-bold">{propertyName}</p>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur px-4 py-2 rounded-xl border border-white/20">
               <BedDouble className="h-4 w-4" />
-              <p className="text-sm font-bold">Room 102 · Floor 1</p>
+              <p className="text-sm font-bold">Room {roomNumber}</p>
             </div>
           </div>
         </div>
@@ -76,7 +106,7 @@ export default function TenantDashboard() {
         {[
           {
             label: "Current Invoice",
-            value: currentInvoice ? `$${currentInvoice.amount}` : "Clear",
+            value: currentInvoice ? `$${Number(currentInvoice.total_due).toFixed(2)}` : "Clear",
             sub: currentInvoice ? `Due ${nextDue}` : "No outstanding bills",
             icon: DollarSign,
             color: currentInvoice?.status === "OVERDUE" ? "text-destructive bg-destructive/10" : "text-amber-500 bg-amber-500/10"
@@ -90,15 +120,15 @@ export default function TenantDashboard() {
           },
           {
             label: "Credit Balance",
-            value: `$${creditBalance}`,
+            value: `$${Number(creditBalance).toFixed(2)}`,
             sub: "Overpayment credit",
             icon: CheckCircle2,
             color: "text-emerald-500 bg-emerald-500/10"
           },
           {
             label: "Invoices",
-            value: `${MY_INVOICES.length}`,
-            sub: `${MY_INVOICES.filter(i => i.status === "PAID").length} paid`,
+            value: `${invoices.length}`,
+            sub: `${invoices.filter(i => i.status === "PAID").length} paid`,
             icon: FileText,
             color: "text-violet-500 bg-violet-500/10"
           }
@@ -128,92 +158,62 @@ export default function TenantDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={`${STATUS_META[currentInvoice.status].color} border-none font-bold`}>
-                    {React.createElement(STATUS_META[currentInvoice.status].icon, { className: "h-3.5 w-3.5 mr-1" })}
-                    {STATUS_META[currentInvoice.status].label}
+                  <Badge variant="outline" className={`${STATUS_META[currentInvoice.status as keyof typeof STATUS_META].color} border-none font-bold`}>
+                    {React.createElement(STATUS_META[currentInvoice.status as keyof typeof STATUS_META].icon, { className: "h-3.5 w-3.5 mr-1" })}
+                    {STATUS_META[currentInvoice.status as keyof typeof STATUS_META].label}
                   </Badge>
-                  <span className="text-xs text-muted-foreground">{currentInvoice.id}</span>
+                  <span className="text-xs text-muted-foreground">Inv #{currentInvoice.id.slice(0, 8)}...</span>
                 </div>
-                <p className="font-bold text-xl">{currentInvoice.month} Invoice</p>
-                <p className="text-3xl font-black">${currentInvoice.amount}</p>
-                <p className="text-xs text-muted-foreground">Due: {currentInvoice.dueDate}</p>
+                <p className="font-bold text-xl">{currentInvoice.type} Invoice</p>
+                <p className="text-3xl font-black">${Number(currentInvoice.total_due).toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Due: {new Date(currentInvoice.due_date).toLocaleDateString()}</p>
               </div>
-              <a
+              <Link
                 href="/tenant/payments/submit"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all duration-200 active:scale-95 whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer"
               >
                 <UploadCloud className="h-4 w-4" /> Submit Payment Receipt
-              </a>
+              </Link>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Recent Invoices */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" /> Recent Invoices
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 pt-0">
-            {MY_INVOICES.slice(0, 4).map(inv => {
-              const meta = STATUS_META[inv.status];
-              const Icon = meta.icon;
-              return (
-                <div key={inv.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/20 transition-colors group cursor-pointer">
-                  <div className={`p-2 rounded-lg ${meta.color} flex-shrink-0`}>
-                    <Icon className="h-3.5 w-3.5" />
+      {/* Recent Invoices list */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-extrabold">All Invoice History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {invoices.length === 0 ? (
+              <div className="text-center py-12 text-sm text-muted-foreground">
+                No invoices found in your account history.
+              </div>
+            ) : (
+              invoices.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between p-4 rounded-xl border border-border hover:bg-accent/20 transition-all duration-150">
+                  <div>
+                    <p className="font-bold text-sm">
+                      {inv.type} Invoice <span className="text-xs font-normal text-muted-foreground font-mono">(#{inv.id.slice(0, 8)})</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Due Date: {new Date(inv.due_date).toLocaleDateString()}
+                    </p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold truncate">{inv.month}</p>
-                    <p className="text-[10px] text-muted-foreground">{inv.id} · Due {inv.dueDate}</p>
+                  <div className="flex items-center gap-4">
+                    <span className="font-bold text-sm">${Number(inv.total_due).toFixed(2)}</span>
+                    <Badge variant="outline" className={`${STATUS_META[inv.status as keyof typeof STATUS_META].color} border-none font-bold`}>
+                      {React.createElement(STATUS_META[inv.status as keyof typeof STATUS_META].icon, { className: "h-3.5 w-3.5 mr-1" })}
+                      {STATUS_META[inv.status as keyof typeof STATUS_META].label}
+                    </Badge>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black">${inv.amount}</p>
-                    <p className={`text-[10px] font-bold ${meta.color.split(" ")[0]}`}>{meta.label}</p>
-                  </div>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
-            {[
-              { href: "/tenant/payments/submit", icon: UploadCloud, label: "Submit Payment Receipt", sub: "Upload proof of payment", color: "bg-primary/10 text-primary" },
-              { href: "/tenant/invoices", icon: FileText, label: "View All Invoices", sub: "See full invoice history", color: "bg-sky-500/10 text-sky-500" },
-              { href: "/tenant/support", icon: LifeBuoy, label: "Raise Support Ticket", sub: "Report maintenance or issues", color: "bg-amber-500/10 text-amber-500" },
-              { href: "/tenant/agreement", icon: Building2, label: "My Agreement", sub: "View lease details", color: "bg-violet-500/10 text-violet-500" }
-            ].map(action => {
-              const Icon = action.icon;
-              return (
-                <a
-                  key={action.href}
-                  href={action.href}
-                  className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-accent/20 hover:border-primary/20 hover:shadow-md transition-all duration-200 group"
-                >
-                  <div className={`p-3 rounded-xl ${action.color} flex-shrink-0`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold group-hover:text-primary transition-colors">{action.label}</p>
-                    <p className="text-xs text-muted-foreground">{action.sub}</p>
-                  </div>
-                  <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </a>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </DashboardLayout>
   );
 }
