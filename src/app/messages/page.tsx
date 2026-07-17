@@ -34,6 +34,8 @@ export default function MessagesPage() {
   const [messageInput, setMessageInput] = React.useState("");
   const [newChatOpen, setNewChatOpen] = React.useState(false);
   const [sending, setSending] = React.useState(false);
+  // Holds a newly-selected contact that hasn't exchanged any messages yet
+  const [pendingThread, setPendingThread] = React.useState<{ id: string; name: string; role: string; isSupport: boolean } | null>(null);
 
   const fetchInbox = React.useCallback(async () => {
     try {
@@ -131,10 +133,16 @@ export default function MessagesPage() {
     );
   }, [messages, user]);
 
-  // Messages of the active thread
+  // Messages of the active thread — fall back to pendingThread if no messages yet
   const activeThread = React.useMemo(() => {
-    return threads.find((t) => t.id === activeThreadId);
-  }, [threads, activeThreadId]);
+    const found = threads.find((t) => t.id === activeThreadId);
+    if (found) return found;
+    // If the user just clicked a contact but hasn't sent a message yet, show empty thread
+    if (pendingThread && pendingThread.id === activeThreadId) {
+      return { ...pendingThread, lastMessage: "", lastTime: "", unreadCount: 0, messages: [], supportSenderId: activeSupportSenderId };
+    }
+    return undefined;
+  }, [threads, activeThreadId, pendingThread, activeSupportSenderId]);
 
   // Mark thread as read when selected
   React.useEffect(() => {
@@ -189,6 +197,7 @@ export default function MessagesPage() {
 
   const handleStartChat = (contactId: string | "support", name: string, role: string, isSupport = false) => {
     setActiveThreadId(contactId);
+    setPendingThread({ id: contactId, name, role, isSupport });
     if (isSupport && user?.global_role === "SAAS_ADMIN") {
       setActiveSupportSenderId(contactId.replace("support-", ""));
     }

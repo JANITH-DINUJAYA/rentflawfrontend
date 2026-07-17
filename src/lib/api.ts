@@ -51,10 +51,16 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, log out the user
+        // If refresh fails, redirect to the correct portal login
         if (typeof window !== 'undefined') {
           localStorage.removeItem('rf-access-token');
-          window.location.href = '/login';
+          const path = window.location.pathname;
+          const loginPath =
+            path.startsWith('/admin') ? '/admin/login' :
+            path.startsWith('/tenant') ? '/tenant/login' :
+            path.startsWith('/landlord') ? '/landlord/login' :
+            '/login';
+          window.location.href = loginPath;
         }
         return Promise.reject(refreshError);
       }
