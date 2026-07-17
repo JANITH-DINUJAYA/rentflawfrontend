@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Shield, Users, PlusCircle, Trash2, Loader2, AlertCircle, CheckSquare, Square } from "lucide-react";
+import { Shield, Users, PlusCircle, Trash2, Loader2, AlertCircle, CheckSquare, Square, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -109,6 +109,9 @@ export default function AdminRolesPage() {
   const [staffForm, setStaffForm] = useState(emptyStaffForm);
   const [staffSaving, setStaffSaving] = useState(false);
   const [staffError, setStaffError] = useState("");
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
+  const [createdStaff, setCreatedStaff] = useState<{ email: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"roles" | "staff">("roles");
 
@@ -192,6 +195,8 @@ export default function AdminRolesPage() {
     setStaffError("");
     try {
       await api.post("/staff", staffForm);
+      // Save credentials before clearing form — show them to admin
+      setCreatedStaff({ email, password });
       setShowAddStaff(false);
       setStaffForm({ ...emptyStaffForm, role_id: roles[0]?.id || "" });
       await fetchData();
@@ -201,6 +206,13 @@ export default function AdminRolesPage() {
     } finally {
       setStaffSaving(false);
     }
+  };
+
+  const handleCopyCredentials = () => {
+    if (!createdStaff) return;
+    navigator.clipboard.writeText(`Email: ${createdStaff.email}\nPassword: ${createdStaff.password}\nLogin URL: https://rentflaw.vercel.app/admin/login`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDeleteStaff = async (id: string) => {
@@ -214,6 +226,7 @@ export default function AdminRolesPage() {
   };
 
   return (
+    <>
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -456,8 +469,24 @@ export default function AdminRolesPage() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="spassword">Login Password</Label>
-              <Input id="spassword" type="password" placeholder="Min 8 characters" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} required />
-              <p className="text-[10px] text-muted-foreground">Share this password securely with the staff member.</p>
+              <div className="relative">
+                <Input
+                  id="spassword"
+                  type={showStaffPassword ? "text" : "password"}
+                  placeholder="Min 8 characters"
+                  value={staffForm.password}
+                  onChange={e => setStaffForm({ ...staffForm, password: e.target.value })}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowStaffPassword(v => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showStaffPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">After saving, credentials will be shown for you to share.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="srole">Assigned System Role</Label>
@@ -482,5 +511,50 @@ export default function AdminRolesPage() {
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+
+      {/* Created Staff Credentials Modal */}
+      <Dialog open={!!createdStaff} onOpenChange={() => setCreatedStaff(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base font-extrabold flex items-center gap-2">
+              <Check className="h-5 w-5 text-emerald-500" /> Staff Account Created
+            </DialogTitle>
+            <DialogDescription>Share these login credentials securely with the staff member. This dialog will not appear again.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="p-4 rounded-sm bg-accent/30 border border-border space-y-2 font-mono text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Email:</span>
+                <span className="font-bold">{createdStaff?.email}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Password:</span>
+                <span className="font-bold">{createdStaff?.password}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Login URL:</span>
+                <span className="font-bold text-primary">/admin/login</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground">⚠️ Assign permissions to their role before they can access platform sections.</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={handleCopyCredentials}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-sm border border-border hover:bg-accent/50 transition-all cursor-pointer"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied!" : "Copy Credentials"}
+            </button>
+            <button
+              onClick={() => setCreatedStaff(null)}
+              className="px-4 py-2 text-xs font-bold rounded-sm bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
+            >
+              Done
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

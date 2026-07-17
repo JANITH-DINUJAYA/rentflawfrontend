@@ -57,7 +57,7 @@ const adminItems: SidebarItem[] = [
   { label: "Tenants", href: "/admin/tenants", icon: Users, group: "Platform", requiredPermission: "tenants:read" },
   { label: "Properties", href: "/admin/properties", icon: Building, group: "Platform", requiredPermission: "properties:read" },
   { label: "Agreements", href: "/admin/agreements", icon: FileSignature, group: "Platform", requiredPermission: "agreements:read" },
-  { label: "Inbox", href: "/messages", icon: MessageSquare, group: "Platform" },
+  { label: "Inbox", href: "/messages", icon: MessageSquare, group: "Platform", requiredPermission: "messages:read" },
   { label: "Roles & Staff", href: "/admin/roles", icon: Shield, group: "Management", requiredPermission: "roles:read" },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: Gauge, group: "Billing", requiredPermission: "subscriptions:read" },
   { label: "System Config", href: "/admin/system", icon: Settings, group: "Billing", requiredPermission: "system:read" },
@@ -70,14 +70,14 @@ const landlordItems: SidebarItem[] = [
   { label: "Rooms", href: "/landlord/rooms", icon: DoorOpen, group: "Assets", requiredPermission: "properties:read" },
   { label: "Tenants", href: "/landlord/tenants", icon: Users, group: "People", requiredPermission: "tenants:read" },
   { label: "Agreements", href: "/landlord/agreements", icon: FileSignature, group: "People", requiredPermission: "agreements:read" },
-  { label: "Inbox", href: "/messages", icon: MessageSquare, group: "People" },
+  { label: "Inbox", href: "/messages", icon: MessageSquare, group: "People", requiredPermission: "messages:read" },
   { label: "Invoices", href: "/landlord/invoices", icon: FileText, group: "Finance", requiredPermission: "invoices:read" },
   { label: "Payments", href: "/landlord/payments", icon: DollarSign, group: "Finance", requiredPermission: "payments:read" },
   { label: "Utility Bills", href: "/landlord/utilities", icon: Zap, group: "Finance", requiredPermission: "utilities:read" },
   { label: "Support", href: "/landlord/support", icon: LifeBuoy, group: "Other", requiredPermission: "support:read" },
   { label: "Reports", href: "/landlord/reports", icon: BarChart3, group: "Other", requiredPermission: "reports:read" },
   { label: "Roles & Staff", href: "/landlord/roles", icon: Shield, group: "Other", requiredPermission: "roles:read" },
-  { label: "Subscriptions", href: "/landlord/subscriptions", icon: Crown, group: "Other" },
+  { label: "Subscriptions", href: "/landlord/subscriptions", icon: Crown, group: "Other", requiredPermission: "subscriptions:read" },
 ];
 
 const tenantItems: SidebarItem[] = [
@@ -232,6 +232,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const hasPermission = (item: SidebarItem): boolean => {
     if (!item.requiredPermission) return true; // no restriction — always visible
     if (!isRestrictedStaff) return true;        // full landlord / root admin
+    if (user?.global_role === 'LANDLORD') return true; // full landlord always sees everything
     // Check exact match, wildcard domain (e.g. "properties:*"), or full wildcard
     const [domain] = item.requiredPermission.split(":");
     return staffPermissions.some(

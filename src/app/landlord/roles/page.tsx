@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Shield, Users, PlusCircle, Trash2, Loader2, AlertCircle, CheckSquare, Square } from "lucide-react";
+import { Shield, Users, PlusCircle, Trash2, Loader2, AlertCircle, CheckSquare, Square, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 
 interface Permission {
@@ -100,6 +101,19 @@ const PERMISSION_GROUPS = [
       { action: "reports:read",   label: "View Reports",     desc: "Access financial and occupancy data" },
     ],
   },
+  {
+    group: "Inbox",
+    permissions: [
+      { action: "messages:read",   label: "View Inbox",    desc: "Access tenant message conversations" },
+      { action: "messages:create", label: "Send Messages", desc: "Reply to tenants via inbox" },
+    ],
+  },
+  {
+    group: "Subscription",
+    permissions: [
+      { action: "subscriptions:read", label: "View Subscription", desc: "View current plan and billing details" },
+    ],
+  },
 ];
 
 const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };
@@ -121,6 +135,9 @@ export default function LandlordRolesPage() {
   const [staffForm, setStaffForm] = useState(emptyStaffForm);
   const [staffSaving, setStaffSaving] = useState(false);
   const [staffError, setStaffError] = useState("");
+  const [showStaffPw, setShowStaffPw] = useState(false);
+  const [createdStaff, setCreatedStaff] = useState<{ email: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"roles" | "staff">("roles");
 
@@ -204,6 +221,7 @@ export default function LandlordRolesPage() {
     setStaffError("");
     try {
       await api.post("/staff", staffForm);
+      setCreatedStaff({ email, password });
       setShowAddStaff(false);
       setStaffForm({ ...emptyStaffForm, role_id: roles[0]?.id || "" });
       await fetchData();
@@ -213,6 +231,13 @@ export default function LandlordRolesPage() {
     } finally {
       setStaffSaving(false);
     }
+  };
+
+  const handleCopyCredentials = () => {
+    if (!createdStaff) return;
+    navigator.clipboard.writeText(`Email: ${createdStaff.email}\nPassword: ${createdStaff.password}\nLogin URL: https://rentflaw.vercel.app/landlord/login`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleRemoveStaff = async (id: string) => {
@@ -449,8 +474,23 @@ export default function LandlordRolesPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="staff-password">Login Password</Label>
-              <Input id="staff-password" type="password" placeholder="Min 8 characters" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} />
-              <p className="text-[10px] text-muted-foreground">This will be the staff member&apos;s login password. Share it with them securely.</p>
+              <div className="relative">
+                <Input
+                  id="staff-password"
+                  type={showStaffPw ? "text" : "password"}
+                  placeholder="Min 8 characters"
+                  value={staffForm.password}
+                  onChange={e => setStaffForm({ ...staffForm, password: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowStaffPw(v => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showStaffPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Credentials will be shown after saving for secure sharing.</p>
             </div>
             <div className="space-y-1.5">
               <Label>Select Role</Label>
@@ -468,6 +508,50 @@ export default function LandlordRolesPage() {
               </button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Staff Credentials Modal */}
+      <Dialog open={!!createdStaff} onOpenChange={() => setCreatedStaff(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base font-extrabold flex items-center gap-2">
+              <Check className="h-5 w-5 text-emerald-500" /> Staff Account Created
+            </DialogTitle>
+            <DialogDescription>Share these credentials securely. This dialog will not appear again.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="p-4 rounded-sm bg-accent/30 border border-border space-y-2 font-mono text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Email:</span>
+                <span className="font-bold">{createdStaff?.email}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Password:</span>
+                <span className="font-bold">{createdStaff?.password}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Login URL:</span>
+                <span className="font-bold text-primary">/landlord/login</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground">⚠️ Assign permissions to their role before they can access specific sections.</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={handleCopyCredentials}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-sm border border-border hover:bg-accent/50 transition-all cursor-pointer"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied!" : "Copy Credentials"}
+            </button>
+            <button
+              onClick={() => setCreatedStaff(null)}
+              className="px-4 py-2 text-xs font-bold rounded-sm bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
+            >
+              Done
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
