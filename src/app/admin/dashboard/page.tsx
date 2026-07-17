@@ -1,113 +1,203 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, DollarSign, Crown, Activity, AlertCircle, ArrowUpRight } from "lucide-react";
-
-interface LandlordActivity {
-  id: string;
-  name: string;
-  email: string;
-  subscription: string;
-  propertiesCount: number;
-  registeredAt: string;
-}
-
-const RECENT_LANDLORDS: LandlordActivity[] = [
-  { id: "LL-004", name: "Apex Properties Ltd", email: "billing@apexprop.com", subscription: "PRO", propertiesCount: 4, registeredAt: "2026-07-15" },
-  { id: "LL-003", name: "Greenwood Rentals", email: "info@greenwoodrent.com", subscription: "ENTERPRISE", propertiesCount: 8, registeredAt: "2026-07-14" },
-  { id: "LL-002", name: "John Doe (Individual)", email: "john.doe@gmail.com", subscription: "STARTER", propertiesCount: 1, registeredAt: "2026-07-10" }
-];
+import { Building2, Users, Crown, Activity, Loader2, ArrowRight } from "lucide-react";
+import { api } from "@/lib/api";
+import Link from "next/link";
 
 export default function AdminDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [landlords, setLandlords] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [llRes, tRes, pkgRes] = await Promise.all([
+          api.get("/landlords"),
+          api.get("/tenants"),
+          api.get("/subscriptions/packages"),
+        ]);
+        setLandlords(Array.isArray(llRes.data) ? llRes.data : []);
+        setTenants(Array.isArray(tRes.data) ? tRes.data : []);
+        setPackages(Array.isArray(pkgRes.data) ? pkgRes.data : []);
+      } catch (err) {
+        console.error("Admin dashboard load failed", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const activeLandlords = landlords.filter((l: any) => l.user?.is_active !== false);
+  const recentLandlords = [...landlords]
+    .sort((a, b) => new Date(b.user?.created_at || 0).getTime() - new Date(a.user?.created_at || 0).getTime())
+    .slice(0, 5);
+
+  // Revenue estimate: count active subscriptions × average package price
+  const activeSubsCount = landlords.filter((l: any) => l.subscription_status === "ACTIVE").length;
+  const avgPkg = packages.length > 0
+    ? packages.reduce((sum: number, p: any) => sum + Number(p.price_monthly || 0), 0) / packages.length
+    : 0;
+  const mrrEstimate = (activeSubsCount * avgPkg).toFixed(0);
+
+  const kpis = [
+    {
+      label: "Active Landlords",
+      value: loading ? "—" : String(activeLandlords.length),
+      sub: loading ? "" : `${landlords.length} total registered`,
+      icon: Building2,
+      color: "text-violet-400 bg-violet-500/15",
+      href: "/admin/landlords",
+    },
+    {
+      label: "Total Tenants",
+      value: loading ? "—" : String(tenants.length),
+      sub: loading ? "" : "Global tenant accounts",
+      icon: Users,
+      color: "text-sky-400 bg-sky-500/15",
+      href: "/admin/tenants",
+    },
+    {
+      label: "Active Subscriptions",
+      value: loading ? "—" : String(activeSubsCount),
+      sub: loading ? "" : `Est. MRR: $${mrrEstimate}`,
+      icon: Crown,
+      color: "text-amber-400 bg-amber-500/15",
+      href: "/admin/subscriptions",
+    },
+    {
+      label: "Subscription Packages",
+      value: loading ? "—" : String(packages.length),
+      sub: loading ? "" : "Available pricing tiers",
+      icon: Activity,
+      color: "text-emerald-400 bg-emerald-500/15",
+      href: "/admin/subscriptions",
+    },
+  ];
+
   return (
     <DashboardLayout>
-      {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Admin System Control Panel</h2>
-        <p className="text-sm text-muted-foreground">Monitor platform tenants, track MRR subscriptions growth, and manage global system resources.</p>
+        <h2 className="text-2xl font-bold tracking-tight">Admin Control Panel</h2>
+        <p className="text-sm text-muted-foreground">
+          Monitor platform landlords, tenants, subscriptions and system resources.
+        </p>
       </div>
 
-      {/* Global SaaS Platform KPIs */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Active Landlords", value: "24", sub: "+3 this week", icon: Building2, color: "text-primary bg-primary/10" },
-          { label: "Total Tenants Registered", value: "312", sub: "+18 this week", icon: Users, color: "text-sky-500 bg-sky-500/10" },
-          { label: "Monthly Recurring Revenue", value: "$1,840", sub: "MRR Growth +12%", icon: DollarSign, color: "text-emerald-500 bg-emerald-500/10" },
-          { label: "System Health", value: "99.98%", sub: "All services operational", icon: Activity, color: "text-violet-500 bg-violet-500/10" }
-        ].map(kpi => {
+        {kpis.map(kpi => {
           const Icon = kpi.icon;
           return (
-            <Card key={kpi.label}>
-              <CardContent className="p-5 flex items-center gap-4">
-                <div className={`p-3 rounded-xl flex-shrink-0 ${kpi.color}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                  <p className="text-2xl font-black">{kpi.value}</p>
-                  <p className="text-[10px] text-muted-foreground">{kpi.sub}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Link key={kpi.label} href={kpi.href}>
+              <Card className="hover:border-primary/30 transition-all cursor-pointer">
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className={`p-3 rounded-sm flex-shrink-0 ${kpi.color}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{kpi.label}</p>
+                    {loading ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-1" />
+                    ) : (
+                      <p className="text-2xl font-black">{kpi.value}</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">{kpi.sub}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           );
         })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Registrations */}
+        {/* Recent Landlord Signups */}
         <Card className="lg:col-span-2">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Building2 className="h-4 w-4 text-primary" /> Recent Landlord Signups
             </CardTitle>
+            <Link href="/admin/landlords" className="text-xs text-primary hover:underline flex items-center gap-1">
+              View all <ArrowRight className="h-3 w-3" />
+            </Link>
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
-            {RECENT_LANDLORDS.map(ll => (
-              <div key={ll.id} className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:bg-accent/25 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-                    {ll.name[0]}
+            {loading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : recentLandlords.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-8 text-center">No landlords registered yet.</p>
+            ) : (
+              recentLandlords.map((ll: any) => (
+                <div key={ll.id} className="flex items-center justify-between p-3 rounded-sm border border-border bg-card hover:bg-accent/25 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-sm bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+                      {(ll.company_name || ll.user?.first_name || "?")[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold">
+                        {ll.company_name || `${ll.user?.first_name} ${ll.user?.last_name}`}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {ll.user?.email} · {ll.user?.created_at ? new Date(ll.user.created_at).toLocaleDateString() : ""}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold">{ll.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{ll.email} · {ll.registeredAt}</p>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={`font-bold text-[9px] border-none uppercase ${
+                        ll.subscription_status === "ACTIVE"
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : "bg-yellow-500/10 text-yellow-500"
+                      }`}
+                    >
+                      {ll.subscription_status || "NO PLAN"}
+                    </Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="font-bold text-[9px] border-none bg-primary/10 text-primary uppercase">
-                    {ll.subscription}
-                  </Badge>
-                  <p className="text-xs font-bold text-muted-foreground">{ll.propertiesCount} properties</p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
-        {/* Global Security / Alerts */}
+        {/* Recent Tenants */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-4 w-4" /> System Alerts & Logs
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" /> Recent Tenants
             </CardTitle>
+            <Link href="/admin/tenants" className="text-xs text-primary hover:underline flex items-center gap-1">
+              View all <ArrowRight className="h-3 w-3" />
+            </Link>
           </CardHeader>
-          <CardContent className="space-y-3 pt-0 text-xs">
-            {[
-              { title: "Resend Email Queue", desc: "No delays detected. Delivery rate: 99.8%", status: "OPERATIONAL" },
-              { title: "BullMQ Scheduler", desc: "Overdue scan complete. Next cycle in 12 hours.", status: "IDLE" },
-              { title: "Cloudflare R2 Bucket", desc: "Receipt storage upload health: Excellent.", status: "OPERATIONAL" }
-            ].map((alert, i) => (
-              <div key={i} className="p-3 rounded-xl border border-border bg-card space-y-1">
-                <div className="flex items-center justify-between">
-                  <p className="font-bold">{alert.title}</p>
-                  <span className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">{alert.status}</span>
-                </div>
-                <p className="text-muted-foreground text-[10px]">{alert.desc}</p>
-              </div>
-            ))}
+          <CardContent className="space-y-3 pt-0">
+            {loading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : tenants.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-8 text-center">No tenants registered yet.</p>
+            ) : (
+              [...tenants]
+                .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+                .slice(0, 5)
+                .map((t: any) => (
+                  <div key={t.id} className="flex items-center gap-3 p-2.5 rounded-sm border border-border hover:bg-accent/20 transition-all">
+                    <div className="h-8 w-8 rounded-sm bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      {(t.first_name || "?")[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold truncate">{t.first_name} {t.last_name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{t.tenant_code || t.email}</p>
+                    </div>
+                  </div>
+                ))
+            )}
           </CardContent>
         </Card>
       </div>

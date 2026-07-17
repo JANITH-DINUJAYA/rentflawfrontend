@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTheme, ColorTheme } from "@/components/theme-provider";
 import { 
@@ -20,6 +20,15 @@ import {
 
 export default function LandingPage() {
   const { colorTheme, modeTheme, setColorTheme, setModeTheme } = useTheme();
+  const [packages, setPackages] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch real subscription packages from the backend
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://rentflawbackend-production.up.railway.app/api'}/subscriptions/packages`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setPackages(data); })
+      .catch(() => {}); // Silently fail — pricing shows nothing if API unreachable
+  }, []);
 
   const themes: { name: string; value: ColorTheme; bg: string }[] = [
     { name: "Shamrock", value: "shamrock", bg: "bg-emerald-600" },
@@ -226,6 +235,94 @@ export default function LandingPage() {
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Refund deposits, catalog deductibles, record repair damages, and log complete settlement trails upon agreement termination.
                 </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Pricing Section ─────────────────────── */}
+        <section id="pricing" className="py-24 border-t border-border bg-background transition-colors duration-200">
+          <div className="container mx-auto px-6 max-w-5xl">
+            <div className="text-center max-w-2xl mx-auto mb-14">
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
+                Simple, Transparent Pricing
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Choose the plan that fits your portfolio. Scale at any time.
+              </p>
+            </div>
+            {packages.length === 0 ? (
+              <div className="grid md:grid-cols-3 gap-6">
+                {["Starter", "Pro", "Enterprise"].map((tier, i) => (
+                  <div key={tier} className={`p-8 border-2 ${i === 1 ? 'border-primary bg-primary/5' : 'border-border bg-card'} rounded-sm shadow-sm flex flex-col gap-4`}>
+                    {i === 1 && <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Most Popular</span>}
+                    <h3 className="text-xl font-black">{tier}</h3>
+                    <p className="text-muted-foreground text-xs">Loading pricing&hellip;</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {packages.map((pkg: any, i: number) => (
+                  <div key={pkg.id} className={`p-8 border-2 ${i === 1 ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' : 'border-border bg-card'} rounded-sm flex flex-col gap-4 transition-all duration-300 hover:-translate-y-0.5`}>
+                    {i === 1 && <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Most Popular</span>}
+                    <div>
+                      <h3 className="text-xl font-black">{pkg.name}</h3>
+                      <p className="text-3xl font-extrabold mt-2">
+                        ${Number(pkg.price_monthly).toFixed(0)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                      </p>
+                    </div>
+                    <ul className="space-y-2 text-sm text-muted-foreground flex-1">
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />{pkg.max_properties ?? '∞'} Properties</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />{pkg.max_tenants ?? '∞'} Tenants</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />{pkg.max_staff ?? '∞'} Staff Accounts</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />{pkg.max_rooms ?? '∞'} Rooms</li>
+                      {pkg.features && pkg.features.slice(0, 3).map((f: string) => (
+                        <li key={f} className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />{f}</li>
+                      ))}
+                    </ul>
+                    <a href="/register" className={`mt-auto inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold rounded-sm transition-all duration-200 ${
+                      i === 1
+                        ? 'bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/20'
+                        : 'border border-border hover:bg-accent/50'
+                    }`}>Get Started <ChevronRight className="ml-1 h-4 w-4" /></a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ─── About Section ───────────────────────── */}
+        <section id="about" className="py-24 border-t border-border bg-accent/20 transition-colors duration-200">
+          <div className="container mx-auto px-6 max-w-4xl">
+            <div className="grid md:grid-cols-2 gap-14 items-center">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-5">
+                  Built for Landlords Who Mean Business
+                </h2>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                  RentFlaw was built from the ground up to solve the real pain points of rental management — missed rent, manual spreadsheets, lost receipts, and communication chaos between tenants and landlords.
+                </p>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                  Our multi-tenant SaaS architecture ensures complete data isolation per landlord while giving tenants a single, global identity that follows them across properties.
+                </p>
+                <a href="/register" className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-bold rounded-sm bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/20 transition-all">
+                  Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { label: "Properties Managed", value: "10,000+" },
+                  { label: "Payments Processed", value: "$4.2M+" },
+                  { label: "Active Landlords", value: "500+" },
+                  { label: "Tenant Accounts", value: "12,000+" },
+                ].map(stat => (
+                  <div key={stat.label} className="p-5 border border-border bg-card rounded-sm shadow-sm">
+                    <p className="text-2xl font-black text-primary">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

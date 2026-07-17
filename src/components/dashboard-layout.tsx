@@ -85,6 +85,7 @@ const tenantItems: SidebarItem[] = [
   { label: "Submit Payment", href: "/tenant/payments/submit", icon: UploadCloud, group: "Finance" },
   { label: "My Invoices", href: "/tenant/invoices", icon: FileText, group: "Finance" },
   { label: "My Agreement", href: "/tenant/agreement", icon: FileSignature, group: "Lease" },
+  { label: "Rental History", href: "/tenant/rental-history", icon: Building2, group: "Lease" },
   { label: "Support", href: "/tenant/support", icon: HelpCircle, group: "Lease" },
 ];
 

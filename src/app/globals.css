@@ -74,7 +74,7 @@
   --border: oklch(0.90 0.01 264);
   --input: oklch(0.92 0.01 264);
   --ring: oklch(0.50 0.22 264);
-  --radius: 0.625rem;
+  --radius: 0.15rem;
 
   --sidebar: oklch(0.99 0 0);
   --sidebar-foreground: oklch(0.13 0.02 260);
@@ -175,22 +175,34 @@
    Sidebar: Dark charcoal-indigo with violet accents
 ═══════════════════════════════════════════════════ */
 .portal-admin {
-  --portal-sidebar-bg: oklch(0.16 0.06 280);
-  --portal-sidebar-fg: oklch(0.88 0.03 280);
-  --portal-sidebar-muted: oklch(0.60 0.04 280);
-  --portal-sidebar-border: oklch(1 0 0 / 7%);
-  --portal-sidebar-active-bg: oklch(0.58 0.24 300);
+  --portal-sidebar-bg: oklch(0.14 0.055 278);
+  --portal-sidebar-fg: oklch(0.90 0.03 280);
+  --portal-sidebar-muted: oklch(0.62 0.04 280);
+  --portal-sidebar-border: oklch(1 0 0 / 8%);
+  --portal-sidebar-active-bg: oklch(0.56 0.26 295);
   --portal-sidebar-active-fg: oklch(1 0 0);
-  --portal-sidebar-hover-bg: oklch(0.22 0.06 280);
-  --portal-sidebar-hover-fg: oklch(0.95 0.02 280);
-  --portal-sidebar-logo-bg: oklch(0.58 0.24 300);
+  --portal-sidebar-hover-bg: oklch(0.20 0.06 278);
+  --portal-sidebar-hover-fg: oklch(0.97 0.02 280);
+  --portal-sidebar-logo-bg: oklch(0.56 0.26 295);
   --portal-sidebar-logo-fg: oklch(1 0 0);
-  --portal-header-bg: rgba(22,18,50,0.90);
-  --portal-role-badge: oklch(0.58 0.24 300);
+  --portal-header-bg: rgba(20,16,46,0.92);
+  --portal-role-badge: oklch(0.56 0.26 295);
   --portal-role-badge-fg: oklch(1 0 0);
   --portal-role-label: "Admin Console";
-  --primary: oklch(0.58 0.24 300);
+  /* Override global primary to violet for admin portal */
+  --primary: oklch(0.56 0.26 295);
   --primary-foreground: oklch(1 0 0);
+  /* Tint the card/background in admin portal for dark coherence */
+  --background: oklch(0.11 0.04 278);
+  --foreground: oklch(0.95 0.01 280);
+  --card: oklch(0.16 0.045 278);
+  --card-foreground: oklch(0.95 0.01 280);
+  --muted: oklch(0.20 0.04 278);
+  --muted-foreground: oklch(0.62 0.04 280);
+  --border: oklch(1 0 0 / 9%);
+  --accent: oklch(0.20 0.05 278);
+  --accent-foreground: oklch(0.92 0.02 280);
+  --input: oklch(1 0 0 / 10%);
 }
 
 .dark .portal-admin {
