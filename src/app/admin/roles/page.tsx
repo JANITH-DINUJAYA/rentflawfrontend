@@ -36,13 +36,58 @@ interface StaffMember {
   };
 }
 
-const AVAILABLE_PERMISSIONS = [
-  { action: "MANAGE_LANDLORDS", label: "Manage Landlords", desc: "Create, edit, and delete landlord accounts" },
-  { action: "MANAGE_TENANTS", label: "Manage Tenants", desc: "Create, edit, and delete tenant accounts" },
-  { action: "MANAGE_PROPERTIES", label: "Manage Properties", desc: "View and soft archive all platform properties" },
-  { action: "MANAGE_AGREEMENTS", label: "Manage Agreements", desc: "Monitor lease agreements and authorize tenant leaves" },
-  { action: "MANAGE_SUBSCRIPTIONS", label: "Manage Subscriptions", desc: "Create and delete subscription packages" },
-  { action: "SYSTEM_SUPPORT", label: "System Chat Support", desc: "Communicate with platform users via system chat" },
+// Permissions are now grouped by resource domain with CRUD operations
+const PERMISSION_GROUPS = [
+  {
+    group: "Landlords",
+    permissions: [
+      { action: "landlords:read",   label: "View Landlords",   desc: "Browse registered landlord accounts" },
+      { action: "landlords:create", label: "Create Landlord",  desc: "Register new landlord accounts" },
+      { action: "landlords:update", label: "Edit Landlord",    desc: "Update landlord details and status" },
+      { action: "landlords:delete", label: "Delete Landlord",  desc: "Remove landlord accounts" },
+    ],
+  },
+  {
+    group: "Tenants",
+    permissions: [
+      { action: "tenants:read",   label: "View Tenants",   desc: "Browse registered tenant accounts" },
+      { action: "tenants:create", label: "Create Tenant",  desc: "Register new tenant accounts" },
+      { action: "tenants:update", label: "Edit Tenant",    desc: "Update tenant details" },
+      { action: "tenants:delete", label: "Delete Tenant",  desc: "Remove tenant accounts" },
+    ],
+  },
+  {
+    group: "Properties",
+    permissions: [
+      { action: "properties:read",   label: "View Properties",   desc: "Browse all platform properties" },
+      { action: "properties:update", label: "Edit Property",     desc: "Update property information" },
+      { action: "properties:delete", label: "Archive Property",  desc: "Soft-archive properties" },
+    ],
+  },
+  {
+    group: "Agreements",
+    permissions: [
+      { action: "agreements:read",   label: "View Agreements",      desc: "Browse platform lease agreements" },
+      { action: "agreements:delete", label: "Terminate Agreement",  desc: "Force-terminate any agreement" },
+    ],
+  },
+  {
+    group: "Subscriptions",
+    permissions: [
+      { action: "subscriptions:read",   label: "View Packages",    desc: "Browse subscription packages" },
+      { action: "subscriptions:create", label: "Create Package",   desc: "Create new pricing tiers" },
+      { action: "subscriptions:delete", label: "Delete Package",   desc: "Remove unused packages" },
+    ],
+  },
+  {
+    group: "System",
+    permissions: [
+      { action: "roles:read",   label: "View Roles",     desc: "Browse system roles & staff" },
+      { action: "roles:create", label: "Create Roles",   desc: "Define new system-level roles" },
+      { action: "roles:delete", label: "Delete Roles",   desc: "Remove unused roles" },
+      { action: "system:read",  label: "System Config",  desc: "Access system settings" },
+    ],
+  },
 ];
 
 const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };
@@ -257,27 +302,36 @@ export default function AdminRolesPage() {
                         <Shield className="h-4.5 w-4.5 text-primary" /> Permissions Matrix: {role.name}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {AVAILABLE_PERMISSIONS.map(p => {
-                        const hasPerm = role.permissions.some(rp => rp.action === p.action);
-                        return (
-                          <button
-                            key={p.action}
-                            onClick={() => handleTogglePermission(role, p.action)}
-                            className="flex items-start gap-3 p-3 rounded-xl border border-border/60 hover:border-primary/40 hover:bg-accent/30 transition-all text-left cursor-pointer"
-                          >
-                            {hasPerm ? (
-                              <CheckSquare className="h-4.5 w-4.5 text-primary flex-shrink-0 mt-0.5" />
-                            ) : (
-                              <Square className="h-4.5 w-4.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                            )}
-                            <div>
-                              <p className="text-xs font-bold">{p.label}</p>
-                              <p className="text-[10px] text-muted-foreground leading-normal mt-0.5">{p.desc}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
+                    <CardContent className="space-y-6">
+                      {PERMISSION_GROUPS.map(grp => (
+                        <div key={grp.group} className="space-y-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-primary border-b pb-1">
+                            {grp.group}
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {grp.permissions.map(p => {
+                              const hasPerm = role.permissions.some(rp => rp.action === p.action);
+                              return (
+                                <button
+                                  key={p.action}
+                                  onClick={() => handleTogglePermission(role, p.action)}
+                                  className="flex items-start gap-2.5 p-2 rounded-sm border border-border bg-card hover:border-primary/40 hover:bg-accent/10 transition-all text-left cursor-pointer"
+                                >
+                                  {hasPerm ? (
+                                    <CheckSquare className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                  ) : (
+                                    <Square className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                  )}
+                                  <div>
+                                    <p className="text-xs font-bold leading-tight">{p.label}</p>
+                                    <p className="text-[9px] text-muted-foreground leading-normal mt-0.5">{p.desc}</p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </CardContent>
                   </Card>
                 ))}

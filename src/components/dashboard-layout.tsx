@@ -47,35 +47,36 @@ interface SidebarItem {
   href: string;
   icon: React.ComponentType<any>;
   group?: string;
+  requiredPermission?: string; // e.g. "properties:read" — omit to allow all roles
 }
 
 // ─── Navigation definitions ────────────────────────────────────
 const adminItems: SidebarItem[] = [
   { label: "Overview", href: "/admin/dashboard", icon: LayoutDashboard, group: "Platform" },
-  { label: "Landlords", href: "/admin/landlords", icon: Building2, group: "Platform" },
-  { label: "Tenants", href: "/admin/tenants", icon: Users, group: "Platform" },
-  { label: "Properties", href: "/admin/properties", icon: Building, group: "Platform" },
-  { label: "Agreements", href: "/admin/agreements", icon: FileSignature, group: "Platform" },
+  { label: "Landlords", href: "/admin/landlords", icon: Building2, group: "Platform", requiredPermission: "landlords:read" },
+  { label: "Tenants", href: "/admin/tenants", icon: Users, group: "Platform", requiredPermission: "tenants:read" },
+  { label: "Properties", href: "/admin/properties", icon: Building, group: "Platform", requiredPermission: "properties:read" },
+  { label: "Agreements", href: "/admin/agreements", icon: FileSignature, group: "Platform", requiredPermission: "agreements:read" },
   { label: "Inbox", href: "/messages", icon: MessageSquare, group: "Platform" },
-  { label: "Roles & Staff", href: "/admin/roles", icon: Shield, group: "Management" },
-  { label: "Subscriptions", href: "/admin/subscriptions", icon: Gauge, group: "Billing" },
-  { label: "System Config", href: "/admin/system", icon: Settings, group: "Billing" },
+  { label: "Roles & Staff", href: "/admin/roles", icon: Shield, group: "Management", requiredPermission: "roles:read" },
+  { label: "Subscriptions", href: "/admin/subscriptions", icon: Gauge, group: "Billing", requiredPermission: "subscriptions:read" },
+  { label: "System Config", href: "/admin/system", icon: Settings, group: "Billing", requiredPermission: "system:read" },
 ];
 
 const landlordItems: SidebarItem[] = [
   { label: "Overview", href: "/landlord/dashboard", icon: LayoutDashboard, group: "Home" },
-  { label: "Properties", href: "/landlord/properties", icon: Building, group: "Assets" },
-  { label: "Floors", href: "/landlord/floors", icon: Layers, group: "Assets" },
-  { label: "Rooms", href: "/landlord/rooms", icon: DoorOpen, group: "Assets" },
-  { label: "Tenants", href: "/landlord/tenants", icon: Users, group: "People" },
-  { label: "Agreements", href: "/landlord/agreements", icon: FileSignature, group: "People" },
+  { label: "Properties", href: "/landlord/properties", icon: Building, group: "Assets", requiredPermission: "properties:read" },
+  { label: "Floors", href: "/landlord/floors", icon: Layers, group: "Assets", requiredPermission: "properties:read" },
+  { label: "Rooms", href: "/landlord/rooms", icon: DoorOpen, group: "Assets", requiredPermission: "properties:read" },
+  { label: "Tenants", href: "/landlord/tenants", icon: Users, group: "People", requiredPermission: "tenants:read" },
+  { label: "Agreements", href: "/landlord/agreements", icon: FileSignature, group: "People", requiredPermission: "agreements:read" },
   { label: "Inbox", href: "/messages", icon: MessageSquare, group: "People" },
-  { label: "Invoices", href: "/landlord/invoices", icon: FileText, group: "Finance" },
-  { label: "Payments", href: "/landlord/payments", icon: DollarSign, group: "Finance" },
-  { label: "Utility Bills", href: "/landlord/utilities", icon: Zap, group: "Finance" },
-  { label: "Support", href: "/landlord/support", icon: LifeBuoy, group: "Other" },
-  { label: "Reports", href: "/landlord/reports", icon: BarChart3, group: "Other" },
-  { label: "Roles & Staff", href: "/landlord/roles", icon: Shield, group: "Other" },
+  { label: "Invoices", href: "/landlord/invoices", icon: FileText, group: "Finance", requiredPermission: "invoices:read" },
+  { label: "Payments", href: "/landlord/payments", icon: DollarSign, group: "Finance", requiredPermission: "payments:read" },
+  { label: "Utility Bills", href: "/landlord/utilities", icon: Zap, group: "Finance", requiredPermission: "utilities:read" },
+  { label: "Support", href: "/landlord/support", icon: LifeBuoy, group: "Other", requiredPermission: "support:read" },
+  { label: "Reports", href: "/landlord/reports", icon: BarChart3, group: "Other", requiredPermission: "reports:read" },
+  { label: "Roles & Staff", href: "/landlord/roles", icon: Shield, group: "Other", requiredPermission: "roles:read" },
   { label: "Subscriptions", href: "/landlord/subscriptions", icon: Crown, group: "Other" },
 ];
 
@@ -200,9 +201,33 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const role = portalRole;
   const config = portalConfig[role] || portalConfig.LANDLORD;
-  const sidebarItems =
+  const allSidebarItems =
     role === "SAAS_ADMIN" ? adminItems :
     role === "TENANT" ? tenantItems : landlordItems;
+
+  // ── Permission-based filtering for STAFF users ─────────────────
+  // Full landlords and the principal SAAS_ADMIN (without a staff_profile) see everything.
+  // STAFF or SAAS_ADMIN with a staff_profile see only permitted sections.
+  const isRestrictedStaff = user?.staff_profile !== undefined;
+  const staffPermissions: string[] = (user?.staff_profile?.role?.permissions ?? []).map((p: any) => p.action);
+
+  const hasPermission = (item: SidebarItem): boolean => {
+    if (!item.requiredPermission) return true; // no restriction — always visible
+    if (!isRestrictedStaff) return true;        // full landlord / root admin
+    // Check exact match, wildcard domain (e.g. "properties:*"), or full wildcard
+    const [domain] = item.requiredPermission.split(":");
+    return staffPermissions.some(
+      p => p === item.requiredPermission || p === `${domain}:*` || p === "*:*"
+    );
+  };
+
+  const sidebarItems = allSidebarItems.filter(hasPermission);
+
+  // ── Access Denied check for direct URL navigation ───────────────
+  const currentItem = allSidebarItems.find(
+    item => item.href !== "/" && (pathname === item.href || pathname.startsWith(item.href + "/"))
+  );
+  const canAccessCurrentPage = currentItem ? hasPermission(currentItem) : true;
 
   // Group items for grouped nav rendering
   const groups = sidebarItems.reduce((acc, item) => {
@@ -329,8 +354,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
             {/* Page title + portal badge */}
             <div className="flex items-center gap-3">
-              <h1 className="text-sm font-bold text-foreground">
-                {sidebarItems.find(item => pathname === item.href || pathname.startsWith(item.href + "/"))?.label || "Dashboard"}
+              <h1 className="text-sm font-bold" style={{ color: "var(--portal-header-fg, var(--foreground))" }}>
+                {allSidebarItems.find(item => item.href !== "/" && (pathname === item.href || pathname.startsWith(item.href + "/")))?.label || "Dashboard"}
               </h1>
               <span className="portal-role-badge hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
                 {config.badgeText}
@@ -412,7 +437,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         {/* Content body */}
         <main className="flex-1 p-6 md:p-8 transition-colors duration-200">
           <div className="max-w-6xl mx-auto space-y-6">
-            {children}
+            {canAccessCurrentPage ? children : (
+              <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+                <div className="h-16 w-16 rounded-sm bg-destructive/10 flex items-center justify-center">
+                  <Shield className="h-8 w-8 text-destructive" />
+                </div>
+                <h2 className="text-xl font-black">Access Denied</h2>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Your role does not have permission to view this section. Contact your administrator to request access.
+                </p>
+                <a href=".." className="mt-2 px-4 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-sm hover:opacity-90 transition-all">
+                  Go Back
+                </a>
+              </div>
+            )}
           </div>
         </main>
       </div>

@@ -185,7 +185,8 @@
   --portal-sidebar-hover-fg: oklch(0.97 0.02 280);
   --portal-sidebar-logo-bg: oklch(0.56 0.26 295);
   --portal-sidebar-logo-fg: oklch(1 0 0);
-  --portal-header-bg: rgba(20,16,46,0.92);
+  --portal-header-bg: oklch(0.16 0.06 278);
+  --portal-header-fg: oklch(0.96 0.01 280);
   --portal-role-badge: oklch(0.56 0.26 295);
   --portal-role-badge-fg: oklch(1 0 0);
   --portal-role-label: "Admin Console";
@@ -285,6 +286,7 @@
 
 .portal-header {
   background-color: var(--portal-header-bg);
+  color: var(--portal-header-fg, var(--foreground));
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--portal-sidebar-border, var(--border));

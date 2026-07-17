@@ -67,10 +67,10 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Warning banner */}
-        <div className="flex gap-2.5 p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl text-xs">
-          <AlertTriangle className="h-4.5 w-4.5 flex-shrink-0" />
+        <div className="flex gap-2.5 p-3.5 bg-white/5 border border-white/15 text-white/80 rounded-sm text-xs">
+          <AlertTriangle className="h-4.5 w-4.5 flex-shrink-0 text-amber-400" />
           <p className="leading-normal">
-            <strong>Security Warning:</strong> Authorized administrative access only. System activities are monitored.
+            <strong className="text-white">Security Warning:</strong> Authorized administrative access only. System activities are monitored.
           </p>
         </div>
 

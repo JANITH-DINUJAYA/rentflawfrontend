@@ -47,6 +47,11 @@ export default function LandlordAgreementsPage() {
   const [terminating, setTerminating] = useState(false);
   const [terminateError, setTerminateError] = useState("");
 
+  const [deductFromDeposit, setDeductFromDeposit] = useState(false);
+  const [deductionReason, setDeductionReason] = useState("");
+  const [terminationCost, setTerminationCost] = useState<any | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   const fetchAgreements = async () => {
     setLoading(true);
     setError("");
@@ -62,12 +67,34 @@ export default function LandlordAgreementsPage() {
 
   useEffect(() => { fetchAgreements(); }, []);
 
+  const handleOpenTerminateDialog = async (agreement: Agreement) => {
+    setTerminateTarget(agreement);
+    setExitDate(new Date().toISOString().split("T")[0]);
+    setDeductFromDeposit(false);
+    setDeductionReason("");
+    setTerminationCost(null);
+    setPreviewLoading(true);
+    setTerminateError("");
+    try {
+      const res = await api.get(`/agreements/${agreement.id}/termination-cost`);
+      setTerminationCost(res.data);
+    } catch (err: any) {
+      console.error("Failed to load termination preview", err);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const handleTerminate = async () => {
     if (!terminateTarget) return;
     setTerminating(true);
     setTerminateError("");
     try {
-      await api.patch(`/agreements/${terminateTarget.id}/terminate`, { exit_date: exitDate });
+      await api.patch(`/agreements/${terminateTarget.id}/terminate`, {
+        exit_date: exitDate,
+        deduct_from_deposit: deductFromDeposit,
+        deduction_reason: deductionReason,
+      });
       setTerminateTarget(null);
       await fetchAgreements();
     } catch (err: any) {
@@ -222,7 +249,7 @@ export default function LandlordAgreementsPage() {
                           )}
                           {(agr.status === "ACTIVE" || agr.status === "TERMINATION_REQUESTED") && (
                             <button
-                              onClick={() => { setTerminateTarget(agr); setExitDate(new Date().toISOString().split("T")[0]); }}
+                              onClick={() => handleOpenTerminateDialog(agr)}
                               className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
                                 agr.status === "TERMINATION_REQUESTED"
                                   ? "bg-yellow-500 text-white hover:opacity-90 border-yellow-500"
@@ -245,20 +272,17 @@ export default function LandlordAgreementsPage() {
 
       {/* Terminate / Accept Leave Dialog */}
       <Dialog open={terminateTarget !== null} onOpenChange={o => !o && setTerminateTarget(null)}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {terminateTarget?.status === "TERMINATION_REQUESTED" ? (
-                <><CheckCircle2 className="h-5 w-5 text-yellow-500" /> Accept Leave Request</>
+                <><CheckCircle2 className="h-5 w-5 text-yellow-500" /> Accept Leave & Settlement</>
               ) : (
-                <><AlertTriangle className="h-5 w-5 text-destructive" /> Terminate Agreement</>
+                <><AlertTriangle className="h-5 w-5 text-destructive" /> Terminate Agreement & Settlement</>
               )}
             </DialogTitle>
             <DialogDescription>
-              {terminateTarget?.status === "TERMINATION_REQUESTED"
-                ? `${terminateTarget?.tenant.first_name} ${terminateTarget?.tenant.last_name} has requested to leave Room ${terminateTarget?.room.room_number}. Set the exit date and accept the request to terminate this agreement.`
-                : `This will terminate the active agreement for ${terminateTarget?.tenant.first_name} ${terminateTarget?.tenant.last_name} (Room ${terminateTarget?.room.room_number}).`
-              }
+              Process the final checkout settlement for {terminateTarget?.tenant.first_name} {terminateTarget?.tenant.last_name} (Room {terminateTarget?.room.room_number}).
             </DialogDescription>
           </DialogHeader>
 
@@ -266,26 +290,94 @@ export default function LandlordAgreementsPage() {
             <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium">{terminateError}</div>
           )}
 
-          <div className="space-y-3 py-2">
-            <Label htmlFor="exit-date">Exit Date</Label>
-            <Input
-              id="exit-date"
-              type="date"
-              value={exitDate}
-              onChange={e => setExitDate(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Final invoice will be calculated based on the leaving option:{" "}
-              <strong>{terminateTarget?.leaving_option?.replace(/_/g, " ")}</strong>
-            </p>
-          </div>
+          {previewLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-4 py-2 text-xs">
+              <div className="space-y-1.5">
+                <Label htmlFor="exit-date">Set Official Exit Date</Label>
+                <Input
+                  id="exit-date"
+                  type="date"
+                  value={exitDate}
+                  onChange={e => setExitDate(e.target.value)}
+                />
+              </div>
+
+              {terminationCost && (
+                <div className="space-y-3">
+                  <div className="border border-border rounded-sm divide-y divide-border">
+                    <div className="p-2.5 bg-accent/40 font-bold uppercase tracking-wider text-[10px] text-muted-foreground flex justify-between">
+                      <span>Settlement Items</span>
+                      <span>Amount</span>
+                    </div>
+                    <div className="p-2.5 flex justify-between">
+                      <span className="text-muted-foreground">Security Deposit Held:</span>
+                      <span className="font-bold text-primary">${terminationCost.security_deposit.toFixed(2)}</span>
+                    </div>
+                    <div className="p-2.5 flex justify-between">
+                      <span className="text-muted-foreground">Prorated Final Month Rent ({terminationCost.days_to_pay_for} days):</span>
+                      <span className="font-bold">${terminationCost.final_invoice_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="p-2.5 flex justify-between">
+                      <span className="text-muted-foreground">Tenant Unpaid Invoices ({terminationCost.unpaid_invoices.length}):</span>
+                      <span className="font-bold text-destructive">${terminationCost.total_outstanding.toFixed(2)}</span>
+                    </div>
+                    <div className="p-2.5 bg-accent/20 flex justify-between font-bold">
+                      <span className="text-foreground">Total Dues (Final + Outstanding):</span>
+                      <span className="text-destructive">${(terminationCost.final_invoice_amount + terminationCost.total_outstanding).toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Offset Section */}
+                  <div className="p-3 rounded-sm border border-primary/20 bg-primary/5 space-y-3">
+                    <label className="flex items-center gap-2 font-bold text-primary cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={deductFromDeposit}
+                        onChange={e => setDeductFromDeposit(e.target.checked)}
+                        className="rounded-sm border-primary text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span>Offset Dues from Security Deposit</span>
+                    </label>
+
+                    {deductFromDeposit ? (
+                      <div className="space-y-2 pt-1 border-t border-primary/10">
+                        <div className="flex justify-between items-center text-[11px] font-bold">
+                          <span className="text-muted-foreground">Remaining Deposit to Refund:</span>
+                          <span className="text-emerald-500 font-mono text-sm">
+                            ${Math.max(0, terminationCost.security_deposit - (terminationCost.final_invoice_amount + terminationCost.total_outstanding)).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="deduction-reason" className="text-[10px] text-muted-foreground">Deduction Notes / Details</Label>
+                          <Input
+                            id="deduction-reason"
+                            placeholder="e.g. Unpaid water bill and stay dates rent deductions."
+                            value={deductionReason}
+                            onChange={e => setDeductionReason(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground">
+                        Note: If unchecked, the tenant will be billed for final rent and must pay outstanding invoices manually.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
-            <button onClick={() => setTerminateTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
+            <button onClick={() => setTerminateTarget(null)} className="px-4 py-2 text-sm rounded-sm border border-border hover:bg-accent/50 cursor-pointer">Cancel</button>
             <button
               onClick={handleTerminate}
               disabled={terminating}
-              className={`px-4 py-2 text-sm font-bold rounded-lg text-white hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60 ${
+              className={`px-4 py-2 text-sm font-bold rounded-sm text-white hover:opacity-90 flex items-center gap-1.5 cursor-pointer disabled:opacity-60 ${
                 terminateTarget?.status === "TERMINATION_REQUESTED" ? "bg-yellow-500" : "bg-destructive"
               }`}
             >

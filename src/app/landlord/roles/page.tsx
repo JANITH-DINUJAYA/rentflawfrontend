@@ -35,15 +35,71 @@ interface StaffMember {
   };
 }
 
-const AVAILABLE_PERMISSIONS = [
-  { action: "MANAGE_PROPERTIES", label: "Manage Properties", desc: "Create, update, and archive properties" },
-  { action: "MANAGE_FLOORS_ROOMS", label: "Manage Floors & Rooms", desc: "Structure buildings and assign rooms" },
-  { action: "MANAGE_TENANTS", label: "Manage Tenants", desc: "Invite, view, and assign tenant details" },
-  { action: "MANAGE_AGREEMENTS", label: "Manage Rental Agreements", desc: "Draft, activate, and terminate agreements" },
-  { action: "MANAGE_INVOICES", label: "Manage Invoices", desc: "Generate, discount, and review invoices" },
-  { action: "APPROVE_PAYMENTS", label: "Approve Payments", desc: "Review and approve/reject tenant submissions" },
-  { action: "MANAGE_UTILITIES", label: "Manage Utilities", desc: "Record metered utility readings and bills" },
-  { action: "VIEW_REPORTS", label: "View Reports", desc: "Access property reports and financial analytics" },
+// Permissions grouped by resource domain with CRUD operations
+const PERMISSION_GROUPS = [
+  {
+    group: "Properties",
+    permissions: [
+      { action: "properties:read",   label: "View Properties",   desc: "Browse properties profile" },
+      { action: "properties:create", label: "Create Property",  desc: "Add new buildings & houses" },
+      { action: "properties:update", label: "Edit Property",    desc: "Update building properties info" },
+      { action: "properties:delete", label: "Archive Property",  desc: "Soft-archive properties" },
+    ],
+  },
+  {
+    group: "Floors & Rooms",
+    permissions: [
+      { action: "rooms:read",   label: "View Rooms",   desc: "Browse rooms and floors layout" },
+      { action: "rooms:create", label: "Create Rooms",  desc: "Add rooms to building floors" },
+      { action: "rooms:update", label: "Edit Rooms",    desc: "Update room number and rent price" },
+      { action: "rooms:delete", label: "Archive Rooms",  desc: "Archive vacant rooms" },
+    ],
+  },
+  {
+    group: "Tenants",
+    permissions: [
+      { action: "tenants:read",   label: "View Tenants",   desc: "Browse active & past tenants" },
+      { action: "tenants:create", label: "Invite Tenant",  desc: "Send digital invitation code" },
+      { action: "tenants:update", label: "Edit Tenant",    desc: "Update tenant rental identity" },
+    ],
+  },
+  {
+    group: "Agreements",
+    permissions: [
+      { action: "agreements:read",   label: "View Agreements",      desc: "Browse rental agreement list" },
+      { action: "agreements:create", label: "Create Agreement",     desc: "Draft lease invitation terms" },
+      { action: "agreements:update", label: "Activate Agreement",   desc: "Approve and activate standard lease" },
+      { action: "agreements:delete", label: "Terminate Agreement",  desc: "Settle and close active agreement" },
+    ],
+  },
+  {
+    group: "Invoices",
+    permissions: [
+      { action: "invoices:read",   label: "View Invoices",    desc: "Browse generated rent invoices" },
+      { action: "invoices:create", label: "Manual Invoice",   desc: "Generate manual ad-hoc invoice" },
+      { action: "invoices:update", label: "Apply Discount",   desc: "Discount outstanding balances" },
+    ],
+  },
+  {
+    group: "Payments",
+    permissions: [
+      { action: "payments:read",   label: "View Payments",    desc: "Browse payment submission logs" },
+      { action: "payments:update", label: "Approve Payment",  desc: "Verify bank slips and mark paid" },
+    ],
+  },
+  {
+    group: "Utilities",
+    permissions: [
+      { action: "utilities:read",   label: "View Utilities",   desc: "Browse utility bill logs" },
+      { action: "utilities:create", label: "Record Reading",   desc: "Input water & electricity meters" },
+    ],
+  },
+  {
+    group: "Reports & Analytics",
+    permissions: [
+      { action: "reports:read",   label: "View Reports",     desc: "Access financial and occupancy data" },
+    ],
+  },
 ];
 
 const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };
@@ -245,28 +301,37 @@ export default function LandlordRolesPage() {
                       <Trash2 className="h-4.5 w-4.5" />
                     </button>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
                       <Label className="text-xs uppercase font-extrabold tracking-wider text-muted-foreground">Permissions Configuration</Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                        {AVAILABLE_PERMISSIONS.map(p => {
-                          const hasPerm = role.permissions.some(rp => rp.action === p.action);
-                          return (
-                            <button
-                              key={p.action}
-                              onClick={() => handleTogglePermission(role, p.action)}
-                              className={`flex items-start gap-2.5 p-2 rounded-xl text-left border transition-all cursor-pointer ${hasPerm ? "border-primary/30 bg-primary/5 text-primary" : "border-border hover:bg-accent/40"}`}
-                            >
-                              <div className="mt-0.5">
-                                {hasPerm ? <CheckSquare className="h-4.5 w-4.5" /> : <Square className="h-4.5 w-4.5 text-muted-foreground" />}
-                              </div>
-                              <div>
-                                <p className="text-xs font-bold">{p.label}</p>
-                                <p className="text-[10px] text-muted-foreground leading-normal mt-0.5">{p.desc}</p>
-                              </div>
-                            </button>
-                          );
-                        })}
+                      <div className="space-y-4">
+                        {PERMISSION_GROUPS.map(grp => (
+                          <div key={grp.group} className="space-y-1.5">
+                            <h4 className="text-[11px] font-bold uppercase tracking-wider text-primary border-b pb-0.5">
+                              {grp.group}
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {grp.permissions.map(p => {
+                                const hasPerm = role.permissions.some(rp => rp.action === p.action);
+                                return (
+                                  <button
+                                    key={p.action}
+                                    onClick={() => handleTogglePermission(role, p.action)}
+                                    className={`flex items-start gap-2 p-2 rounded-sm text-left border transition-all cursor-pointer ${hasPerm ? "border-primary/30 bg-primary/5 text-primary" : "border-border hover:bg-accent/40"}`}
+                                  >
+                                    <div className="mt-0.5 flex-shrink-0">
+                                      {hasPerm ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-bold leading-tight">{p.label}</p>
+                                      <p className="text-[9px] text-muted-foreground leading-normal mt-0.5">{p.desc}</p>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </CardContent>
