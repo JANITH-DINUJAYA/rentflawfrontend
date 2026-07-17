@@ -151,8 +151,8 @@ export default function MessagesPage() {
     const markRead = async () => {
       try {
         if (activeThreadId.startsWith("support-")) {
-          // For SAAS_ADMIN viewing support
-          await api.patch("/messages/read-support");
+          const senderId = activeThreadId.replace("support-", "");
+          await api.patch(`/messages/read-support/${senderId}`);
         } else if (activeThreadId === "support") {
           // For Tenant/Landlord viewing support
           await api.patch("/messages/read-support");

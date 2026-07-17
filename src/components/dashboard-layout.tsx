@@ -128,29 +128,47 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [notifications, setNotifications] = React.useState<any[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
+  const [unreadMessages, setUnreadMessages] = React.useState(0);
 
-  const fetchNotifications = React.useCallback(async () => {
+  const fetchNotificationsAndMessages = React.useCallback(async () => {
     try {
-      const res = await api.get("/notifications");
-      setNotifications(res.data);
-      setUnreadCount(res.data.filter((n: any) => !n.is_read).length);
+      const [notifRes, msgRes] = await Promise.all([
+        api.get("/notifications"),
+        api.get("/messages"),
+      ]);
+      setNotifications(notifRes.data);
+      setUnreadCount(notifRes.data.filter((n: any) => !n.is_read).length);
+
+      let msgCount = 0;
+      if (user) {
+        msgRes.data.forEach((msg: any) => {
+          if (msg.sender_id !== user.id && !msg.is_read) {
+            if (user.global_role === "SAAS_ADMIN") {
+              if (msg.to_admin) msgCount++;
+            } else {
+              msgCount++;
+            }
+          }
+        });
+      }
+      setUnreadMessages(msgCount);
     } catch (err) {
-      console.error("Failed to fetch notifications", err);
+      console.error("Failed to fetch notifications or messages", err);
     }
-  }, []);
+  }, [user]);
 
   React.useEffect(() => {
     if (user) {
-      fetchNotifications();
-      const interval = setInterval(fetchNotifications, 15000); // 15 seconds poll
+      fetchNotificationsAndMessages();
+      const interval = setInterval(fetchNotificationsAndMessages, 15000); // 15 seconds poll
       return () => clearInterval(interval);
     }
-  }, [user, fetchNotifications]);
+  }, [user, fetchNotificationsAndMessages]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
       await api.patch(`/notifications/${id}/read`);
-      fetchNotifications();
+      fetchNotificationsAndMessages();
     } catch (err) {
       console.error(err);
     }
@@ -159,7 +177,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const handleClearAll = async () => {
     try {
       await api.delete("/notifications");
-      fetchNotifications();
+      fetchNotificationsAndMessages();
     } catch (err) {
       console.error(err);
     }
@@ -208,7 +226,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   // ── Permission-based filtering for STAFF users ─────────────────
   // Full landlords and the principal SAAS_ADMIN (without a staff_profile) see everything.
   // STAFF or SAAS_ADMIN with a staff_profile see only permitted sections.
-  const isRestrictedStaff = user?.staff_profile !== undefined;
+  const isRestrictedStaff = !!user?.staff_profile;
   const staffPermissions: string[] = (user?.staff_profile?.role?.permissions ?? []).map((p: any) => p.action);
 
   const hasPermission = (item: SidebarItem): boolean => {
@@ -291,6 +309,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
                     <span className="flex-1">{item.label}</span>
+                    {item.label === "Inbox" && unreadMessages > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-500 text-white flex-shrink-0 leading-none">
+                        {unreadMessages}
+                      </span>
+                    )}
                     {isActive && <ChevronRight className="h-3 w-3 opacity-60" />}
                   </Link>
                 );

@@ -269,7 +269,7 @@ export default function LandingPage() {
                     <div>
                       <h3 className="text-xl font-black">{pkg.name}</h3>
                       <p className="text-3xl font-extrabold mt-2">
-                        ${Number(pkg.price_monthly).toFixed(0)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                        ${Number(pkg.price).toFixed(0)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
                       </p>
                     </div>
                     <ul className="space-y-2 text-sm text-muted-foreground flex-1">
