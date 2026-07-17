@@ -287,7 +287,11 @@ export default function UtilitiesPage() {
               <div className="space-y-1.5 col-span-2">
                 <Label>Select Invoice</Label>
                 <Select value={form.invoice_id} onValueChange={v => v && setForm({ ...form, invoice_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Choose pending invoice" /></SelectTrigger>
+                  <SelectTrigger>
+                    {form.invoice_id
+                      ? <span className="flex flex-1 text-left truncate">{(() => { const inv = invoices.find(i => i.id === form.invoice_id); if (!inv) return form.invoice_id; const tenant = inv.agreement?.tenant; const name = tenant ? `${tenant.first_name} ${tenant.last_name}` : "Unknown"; const due = new Date(inv.due_date).toLocaleDateString(); return `${name} — $${Number(inv.total_due).toFixed(2)} (Due: ${due})`; })()}</span>
+                      : <SelectValue placeholder="Choose pending invoice" />}
+                  </SelectTrigger>
                   <SelectContent>
                     {invoices.length === 0 ? (
                       <SelectItem value="_none" disabled>No pending invoices found</SelectItem>

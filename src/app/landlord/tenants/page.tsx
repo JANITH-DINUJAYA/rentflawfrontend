@@ -193,7 +193,7 @@ export default function TenantsPage() {
         grace_period_days: parseInt(inviteForm.gracePeriodDays),
         late_fee_flat: parseFloat(inviteForm.lateFeeFlat || "0"),
         leaving_option: inviteForm.leavingOption,
-        leaving_rule: inviteForm.leavingOption === "DECIDE_IN_AGREEMENT" ? inviteForm.leavingRule : undefined
+        leaving_rule: undefined
       });
 
       setShowInvite(false);
@@ -435,7 +435,9 @@ export default function TenantsPage() {
                   <Label>Assign Property</Label>
                   <Select value={inviteForm.propertyId} onValueChange={handlePropertyChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose property" />
+                      {inviteForm.propertyId
+                        ? <span className="flex flex-1 text-left truncate">{properties.find(p => p.id === inviteForm.propertyId)?.name ?? inviteForm.propertyId}</span>
+                        : <SelectValue placeholder="Choose property" />}
                     </SelectTrigger>
                     <SelectContent>
                       {properties.map(p => (
@@ -450,7 +452,9 @@ export default function TenantsPage() {
                   <Label>Select Room</Label>
                   <Select value={inviteForm.roomId} onValueChange={handleRoomChange} disabled={!inviteForm.propertyId}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose room" />
+                      {inviteForm.roomId
+                        ? <span className="flex flex-1 text-left truncate">{(() => { const r = availableRooms.find(r => r.id === inviteForm.roomId); return r ? `Room ${r.room_number} (${r.occupancy_type}) - $${Number(r.base_rent).toFixed(2)}` : inviteForm.roomId; })()}</span>
+                        : <SelectValue placeholder="Choose room" />}
                     </SelectTrigger>
                     <SelectContent>
                       {availableRooms.length === 0 ? (
@@ -559,30 +563,16 @@ export default function TenantsPage() {
                   <Label>Leaving / Checkout Option</Label>
                   <Select value={inviteForm.leavingOption} onValueChange={val => setInviteForm({ ...inviteForm, leavingOption: val || "PAY_STAY_DATES" })}>
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <span className="flex flex-1 text-left truncate">
+                        {inviteForm.leavingOption === "PAY_STAY_DATES" ? "Pay Stay Dates (Prorated)" : "Pay Full Month"}
+                      </span>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="PAY_STAY_DATES">Pay Stay Dates (Prorated)</SelectItem>
                       <SelectItem value="PAY_FULL_MONTH">Pay Full Month</SelectItem>
-                      <SelectItem value="DECIDE_IN_AGREEMENT">Decide In Agreement</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                {inviteForm.leavingOption === "DECIDE_IN_AGREEMENT" && (
-                  <div className="space-y-1.5">
-                    <Label>Active Leaving Rule (for exit month)</Label>
-                    <Select value={inviteForm.leavingRule} onValueChange={val => setInviteForm({ ...inviteForm, leavingRule: val || "" })}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose active checkout rule" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PAY_STAY_DATES">Pay Stay Dates (Prorated)</SelectItem>
-                        <SelectItem value="PAY_FULL_MONTH">Pay Full Month</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 <DialogFooter className="pt-2">
                   <button

@@ -73,6 +73,7 @@ const landlordItems: SidebarItem[] = [
   { label: "Inbox", href: "/messages", icon: MessageSquare, group: "People", requiredPermission: "messages:read" },
   { label: "Invoices", href: "/landlord/invoices", icon: FileText, group: "Finance", requiredPermission: "invoices:read" },
   { label: "Payments", href: "/landlord/payments", icon: DollarSign, group: "Finance", requiredPermission: "payments:read" },
+  { label: "Payouts", href: "/landlord/payouts", icon: DollarSign, group: "Finance", requiredPermission: "refunds:read" },
   { label: "Utility Bills", href: "/landlord/utilities", icon: Zap, group: "Finance", requiredPermission: "utilities:read" },
   { label: "Support", href: "/landlord/support", icon: LifeBuoy, group: "Other", requiredPermission: "support:read" },
   { label: "Reports", href: "/landlord/reports", icon: BarChart3, group: "Other", requiredPermission: "reports:read" },

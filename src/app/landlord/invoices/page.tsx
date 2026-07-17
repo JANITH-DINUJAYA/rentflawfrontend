@@ -325,7 +325,11 @@ export default function InvoicesPage() {
             <div className="space-y-1.5">
               <Label>Active Agreement (Tenant)</Label>
               <Select value={createForm.agreement_id} onValueChange={v => v && setCreateForm(f => ({ ...f, agreement_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Choose active agreement" /></SelectTrigger>
+                <SelectTrigger>
+                  {createForm.agreement_id
+                    ? <span className="flex flex-1 text-left truncate">{(() => { const agr = agreements.find(a => a.id === createForm.agreement_id); const tenant = agr?.tenant; return tenant ? `${tenant.first_name} ${tenant.last_name} — ${agr.property?.name || ""} Rm ${agr.room?.room_number || ""}` : createForm.agreement_id; })()}</span>
+                    : <SelectValue placeholder="Choose active agreement" />}
+                </SelectTrigger>
                 <SelectContent>
                   {agreements.length === 0 ? (
                     <SelectItem value="_none" disabled>No active agreements found</SelectItem>

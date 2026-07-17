@@ -209,7 +209,11 @@ export default function RoomsPage() {
             <div className="space-y-1.5">
               <Label>Select Floor</Label>
               <Select value={form.floor_id} onValueChange={v => { if (v) setForm(f => ({ ...f, floor_id: v })); }}>
-                <SelectTrigger><SelectValue placeholder="Choose floor" /></SelectTrigger>
+                <SelectTrigger>
+                  {form.floor_id
+                    ? <span className="flex flex-1 text-left truncate">{(() => { const fl = floors.find(f => f.id === form.floor_id); return fl ? `${fl.property?.name || ""} / ${fl.name}` : form.floor_id; })()}</span>
+                    : <SelectValue placeholder="Choose floor" />}
+                </SelectTrigger>
                 <SelectContent>
                   {floors.length === 0 ? (
                     <SelectItem value="_none" disabled>No floors available — create one first</SelectItem>

@@ -114,6 +114,13 @@ const PERMISSION_GROUPS = [
       { action: "subscriptions:read", label: "View Subscription", desc: "View current plan and billing details" },
     ],
   },
+  {
+    group: "Payouts & Refunds",
+    permissions: [
+      { action: "refunds:read",   label: "View Payouts",    desc: "Access tenant refunds and credit balances" },
+      { action: "refunds:update", label: "Process Payout",  desc: "Issue refunds and settle payouts" },
+    ],
+  },
 ];
 
 const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };

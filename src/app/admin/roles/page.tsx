@@ -88,6 +88,13 @@ const PERMISSION_GROUPS = [
       { action: "system:read",  label: "System Config",  desc: "Access system settings" },
     ],
   },
+  {
+    group: "Payouts & Refunds",
+    permissions: [
+      { action: "refunds:read",   label: "View Payouts",    desc: "Access platform payouts and refunds" },
+      { action: "refunds:update", label: "Process Payout",  desc: "Settle refunds globally" },
+    ],
+  },
 ];
 
 const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };

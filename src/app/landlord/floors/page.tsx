@@ -118,7 +118,9 @@ export default function FloorsPage() {
         </div>
         <Select value={selectedPropertyId} onValueChange={v => { if (v) { setSelectedPropertyId(v); setFormPropertyId(v); } }}>
           <SelectTrigger className="w-full sm:w-60">
-            <SelectValue placeholder={propsLoading ? "Loading..." : "Select property"} />
+            {selectedPropertyId
+              ? <span className="flex flex-1 text-left truncate">{properties.find(p => p.id === selectedPropertyId)?.name ?? selectedPropertyId}</span>
+              : <SelectValue placeholder={propsLoading ? "Loading..." : "Select property"} />}
           </SelectTrigger>
           <SelectContent>
             {properties.map(p => <SelectItem key={p.id} value={p.id}>{`${p.name}`}</SelectItem>)}
@@ -202,7 +204,11 @@ export default function FloorsPage() {
             <div className="space-y-1.5">
               <Label>Select Property</Label>
               <Select value={formPropertyId} onValueChange={v => { if (v) setFormPropertyId(v); }}>
-                <SelectTrigger><SelectValue placeholder="Choose a property" /></SelectTrigger>
+                <SelectTrigger>
+                  {formPropertyId
+                    ? <span className="flex flex-1 text-left truncate">{properties.find(p => p.id === formPropertyId)?.name ?? formPropertyId}</span>
+                    : <SelectValue placeholder="Choose a property" />}
+                </SelectTrigger>
                 <SelectContent>
                   {properties.map(p => <SelectItem key={p.id} value={p.id}>{`${p.name}`}</SelectItem>)}
                 </SelectContent>
