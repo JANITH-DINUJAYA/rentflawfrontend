@@ -499,7 +499,9 @@ export default function AdminRolesPage() {
               <Label htmlFor="srole">Assigned System Role</Label>
               <Select value={staffForm.role_id} onValueChange={val => setStaffForm({ ...staffForm, role_id: val ?? "" })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a system role" />
+                  {staffForm.role_id
+                    ? <span className="flex flex-1 text-left truncate">{roles.find(r => r.id === staffForm.role_id)?.name ?? staffForm.role_id}</span>
+                    : <SelectValue placeholder="Select a system role" />}
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map(r => (

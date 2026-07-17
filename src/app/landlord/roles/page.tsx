@@ -502,7 +502,11 @@ export default function LandlordRolesPage() {
             <div className="space-y-1.5">
               <Label>Select Role</Label>
               <Select value={staffForm.role_id} onValueChange={v => { if (v) setStaffForm({ ...staffForm, role_id: v }); }}>
-                <SelectTrigger><SelectValue placeholder="Choose a role" /></SelectTrigger>
+                <SelectTrigger>
+                  {staffForm.role_id
+                    ? <span className="flex flex-1 text-left truncate">{roles.find(r => r.id === staffForm.role_id)?.name ?? staffForm.role_id}</span>
+                    : <SelectValue placeholder="Choose a role" />}
+                </SelectTrigger>
                 <SelectContent>
                   {roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
                 </SelectContent>
