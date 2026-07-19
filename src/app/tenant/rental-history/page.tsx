@@ -31,10 +31,12 @@ interface PastAgreement {
     };
   };
   deposit_refund?: {
+    id: string;
     refund_amount: number;
     deductions: number;
-    deduction_reason: string | null;
-    status: string;
+    reason: string | null;
+    is_paid: boolean;
+    processed_at: string;
     created_at: string;
   } | null;
 }
@@ -173,15 +175,22 @@ export default function TenantRentalHistoryPage() {
 
                   {/* Deposit Refund Trail */}
                   {agr.deposit_refund && (
-                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-sm mt-2 text-xs space-y-2">
+                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl mt-2 text-xs space-y-2">
                       <p className="font-bold text-primary flex items-center gap-1.5">
                         <FileSignature className="h-4 w-4" /> Security Deposit Settlement
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div>
                           <p className="text-muted-foreground">Status:</p>
-                          <Badge variant="outline" className="text-[9px] font-bold mt-0.5 bg-primary/10 border-none text-primary uppercase">
-                            {agr.deposit_refund.status}
+                          <Badge
+                            variant="outline"
+                            className={`text-[9px] font-bold mt-0.5 border-none uppercase ${
+                              agr.deposit_refund.is_paid
+                                ? "bg-emerald-500/10 text-emerald-500"
+                                : "bg-yellow-500/10 text-yellow-600"
+                            }`}
+                          >
+                            {agr.deposit_refund.is_paid ? "Paid" : "Settle Pending"}
                           </Badge>
                         </div>
                         <div>
@@ -197,9 +206,9 @@ export default function TenantRentalHistoryPage() {
                           </p>
                         </div>
                       </div>
-                      {agr.deposit_refund.deduction_reason && (
+                      {agr.deposit_refund.reason && (
                         <p className="text-[11px] text-muted-foreground italic border-t pt-1.5 mt-1.5">
-                          Deduction Reason: {agr.deposit_refund.deduction_reason}
+                          Deduction Reason: {agr.deposit_refund.reason}
                         </p>
                       )}
                     </div>

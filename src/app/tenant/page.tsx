@@ -13,7 +13,8 @@ import {
   BedDouble,
   UploadCloud,
   Loader2,
-  Check
+  Check,
+  Landmark
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,16 +33,22 @@ export default function TenantDashboard() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [pendingRefunds, setPendingRefunds] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [profileRes, invoicesRes] = await Promise.all([
+        const [profileRes, invoicesRes, historyRes] = await Promise.all([
           api.get("/tenants/profile"),
           api.get("/invoices/tenant"),
+          api.get("/agreements/history").catch(() => ({ data: [] })),
         ]);
         setProfile(profileRes.data);
         setInvoices(Array.isArray(invoicesRes.data?.invoices) ? invoicesRes.data.invoices : []);
+        // Pending (unpaid) deposit refunds from all terminated agreements
+        const history = Array.isArray(historyRes.data) ? historyRes.data : [];
+        const pending = history.filter((a: any) => a.deposit_refund && !a.deposit_refund.is_paid);
+        setPendingRefunds(pending);
       } catch (err) {
         console.error("Failed to load tenant dashboard live data", err);
       } finally {
@@ -116,6 +123,41 @@ export default function TenantDashboard() {
           >
             <Check className="h-3.5 w-3.5" /> Accept Invitation
           </button>
+        </div>
+      )}
+
+      {/* Pending Deposit Refund Payouts Banner */}
+      {pendingRefunds.length > 0 && (
+        <div className="space-y-2">
+          {pendingRefunds.map((agr: any) => (
+            <div
+              key={agr.id}
+              className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                  <Landmark className="h-4.5 w-4.5 text-yellow-600" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-yellow-600 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" /> Deposit Refund Pending
+                  </p>
+                  <p className="font-extrabold text-sm text-foreground">
+                    ${Number(agr.deposit_refund.refund_amount).toFixed(2)} — {agr.property?.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Your landlord has not yet settled this deposit refund. Contact them if overdue.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/tenant/rental-history"
+                className="text-xs font-bold px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition-all cursor-pointer whitespace-nowrap"
+              >
+                View Details
+              </Link>
+            </div>
+          ))}
         </div>
       )}
 
