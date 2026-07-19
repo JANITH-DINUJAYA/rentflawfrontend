@@ -68,13 +68,37 @@ export default function LandlordSubscriptionsPage() {
     setUpgrading(true);
     setUpgradeError("");
     try {
-      await api.post("/subscriptions/upgrade", { packageId: upgradeTarget.id });
-      setUpgradeTarget(null);
-      await fetchData();
+      // Free plan — upgrade directly without payment
+      if (upgradeTarget.price === 0) {
+        await api.post("/subscriptions/upgrade", { packageId: upgradeTarget.id });
+        setUpgradeTarget(null);
+        await fetchData();
+        return;
+      }
+
+      // Paid plan — initiate PayHere checkout
+      const res = await api.post("/payments/payhere/initiate-subscription", {
+        packageId: upgradeTarget.id,
+      });
+      const payhereParams = res.data;
+
+      // Submit form via POST redirect to PayHere sandbox
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "https://sandbox.payhere.lk/pay/checkout";
+      Object.keys(payhereParams).forEach(key => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(payhereParams[key]);
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
     } catch (err: any) {
       const msg = err?.response?.data?.message;
-      setUpgradeError(Array.isArray(msg) ? msg[0] : msg || "Failed to upgrade subscription.");
-    } finally {
+      setUpgradeError(Array.isArray(msg) ? msg[0] : msg || "Failed to initiate subscription checkout.");
       setUpgrading(false);
     }
   };

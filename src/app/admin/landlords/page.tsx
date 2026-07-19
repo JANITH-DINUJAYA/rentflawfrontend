@@ -22,6 +22,11 @@ interface Landlord {
     nic_or_passport: string;
     created_at: string;
   };
+  subscription?: {
+    package: {
+      name: string;
+    };
+  } | null;
 }
 
 export default function AdminLandlordsPage() {
@@ -203,6 +208,7 @@ export default function AdminLandlordsPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>NIC / Passport</TableHead>
+                  <TableHead>Subscription</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -210,48 +216,64 @@ export default function AdminLandlordsPage() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       {search ? `No landlords matching "${search}"` : "No landlords registered yet."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map(l => (
-                    <TableRow key={l.id} className="hover:bg-accent/20 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                            {l.user.first_name?.[0]}{l.user.last_name?.[0]}
+                  filtered.map(l => {
+                    const planName = l.subscription?.package?.name || "No Plan";
+                    const isEnterprise = planName.toLowerCase().includes("enterprise");
+                    const isPro = planName.toLowerCase().includes("pro");
+                    const badgeClass = isEnterprise
+                      ? "bg-purple-500/10 text-purple-600 border-purple-500/25 font-bold"
+                      : isPro
+                      ? "bg-blue-500/10 text-blue-600 border-blue-500/25 font-bold"
+                      : "bg-muted text-muted-foreground font-bold";
+
+                    return (
+                      <TableRow key={l.id} className="hover:bg-accent/20 transition-colors">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                              {l.user.first_name?.[0]}{l.user.last_name?.[0]}
+                            </div>
+                            <span className="font-semibold text-sm">{l.user.first_name} {l.user.last_name}</span>
                           </div>
-                          <span className="font-semibold text-sm">{l.user.first_name} {l.user.last_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{l.company_name || "—"}</TableCell>
-                      <TableCell className="text-sm">{l.user.email}</TableCell>
-                      <TableCell className="text-sm">{l.user.phone}</TableCell>
-                      <TableCell className="text-sm font-mono">{l.user.nic_or_passport}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(l.user.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <button
-                            onClick={() => openEdit(l)}
-                            className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                            title="Edit details"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => openDelete(l.id)}
-                            className="p-1.5 rounded-lg border border-border hover:bg-red-500/10 text-muted-foreground hover:text-red-500 cursor-pointer transition-colors"
-                            title="Delete landlord"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{l.company_name || "—"}</TableCell>
+                        <TableCell className="text-sm">{l.user.email}</TableCell>
+                        <TableCell className="text-sm">{l.user.phone}</TableCell>
+                        <TableCell className="text-sm font-mono">{l.user.nic_or_passport}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={badgeClass}>
+                            {planName}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(l.user.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1.5">
+                            <button
+                              onClick={() => openEdit(l)}
+                              className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                              title="Edit details"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => openDelete(l.id)}
+                              className="p-1.5 rounded-lg border border-border hover:bg-red-500/10 text-muted-foreground hover:text-red-500 cursor-pointer transition-colors"
+                              title="Delete landlord"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
