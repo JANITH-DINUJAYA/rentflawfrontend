@@ -32,18 +32,23 @@ export default function TenantSubmitPaymentPage() {
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [hasActiveLease, setHasActiveLease] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadData = async (preselectedInvoiceId: string | null) => {
     try {
-      const [invoicesRes, submissionsRes] = await Promise.all([
+      const [invoicesRes, submissionsRes, profileRes] = await Promise.all([
         api.get("/invoices/tenant"),
         api.get("/payments/tenant"),
+        api.get("/tenants/profile"),
       ]);
       const allInvoices = Array.isArray(invoicesRes.data?.invoices) ? invoicesRes.data.invoices : [];
       const unpaid = allInvoices.filter((inv: any) => inv.status === "PENDING" || inv.status === "OVERDUE");
       setInvoices(unpaid);
       
+      const active = Array.isArray(profileRes.data?.rental_agreements) && profileRes.data.rental_agreements.some((a: any) => a.status === "ACTIVE");
+      setHasActiveLease(active);
+
       const targetId = preselectedInvoiceId || (unpaid.length > 0 ? unpaid[0].id : "");
       if (targetId) {
         const selected = unpaid.find((inv: any) => inv.id === targetId) || unpaid[0];
@@ -97,12 +102,10 @@ export default function TenantSubmitPaymentPage() {
     setUploading(true);
     setFormError("");
     try {
-      // 1. Upload receipt to Cloudinary
+      // 1. Upload receipt via files service
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await api.post("/files/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      const uploadRes = await api.post("/files/upload", formData);
       const receiptUrl = uploadRes.data?.public_url;
       if (!receiptUrl) throw new Error("Storage URL missing in response.");
 
@@ -192,16 +195,27 @@ export default function TenantSubmitPaymentPage() {
                     </div>
                   )}
 
+                  {!hasActiveLease && (
+                    <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-semibold flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                      You do not have an active lease agreement. You cannot submit payments.
+                    </div>
+                  )}
+
                   {/* Invoice selector */}
                   <div className="space-y-1.5">
                     <Label>Select Invoice to Pay</Label>
-                    {invoices.length === 0 ? (
+                    {!hasActiveLease ? (
+                      <div className="p-3 rounded-lg bg-muted text-muted-foreground text-xs font-semibold">
+                        Lease agreement is not active.
+                      </div>
+                    ) : invoices.length === 0 ? (
                       <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-semibold">
                         All invoices are fully paid! No outstanding balances.
                       </div>
                     ) : (
                       <Select value={invoiceId} onValueChange={v => v && handleInvoiceChange(v)}>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full" disabled={!hasActiveLease}>
                           {invoiceId
                             ? <span className="flex flex-1 text-left truncate">{(() => { const inv = invoices.find(i => i.id === invoiceId); return inv ? `${inv.type} Invoice (${new Date(inv.due_date).toLocaleDateString()}) - $${Number(inv.total_due).toFixed(2)}` : invoiceId; })()}</span>
                             : <SelectValue placeholder="Choose outstanding invoice" />}
@@ -230,7 +244,7 @@ export default function TenantSubmitPaymentPage() {
                         placeholder="0.00"
                         value={amount}
                         onChange={e => setAmount(e.target.value)}
-                        disabled={invoices.length === 0}
+                        disabled={invoices.length === 0 || !hasActiveLease}
                         required
                       />
                     </div>
@@ -240,12 +254,12 @@ export default function TenantSubmitPaymentPage() {
                   <div className="space-y-1.5">
                     <Label>Receipt / Proof of Payment</Label>
                     <div
-                      onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                      onDragOver={e => { if (hasActiveLease) { e.preventDefault(); setDragging(true); } }}
                       onDragLeave={() => setDragging(false)}
-                      onDrop={handleDrop}
-                      onClick={() => fileRef.current?.click()}
-                      className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 ${
-                        dragging ? "border-primary bg-primary/5 scale-[1.01]" : preview ? "border-emerald-500/40 bg-emerald-500/5" : "border-border hover:border-primary/50 hover:bg-accent/20"
+                      onDrop={e => { if (hasActiveLease) handleDrop(e); }}
+                      onClick={() => { if (hasActiveLease) fileRef.current?.click(); }}
+                      className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-200 ${
+                        !hasActiveLease ? "border-muted bg-muted/20 cursor-not-allowed opacity-60" : dragging ? "border-primary bg-primary/5 scale-[1.01] cursor-pointer" : preview ? "border-emerald-500/40 bg-emerald-500/5 cursor-pointer" : "border-border hover:border-primary/50 hover:bg-accent/20 cursor-pointer"
                       }`}
                     >
                       <input
@@ -254,7 +268,7 @@ export default function TenantSubmitPaymentPage() {
                         accept="image/*,application/pdf"
                         className="hidden"
                         onChange={e => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-                        disabled={invoices.length === 0}
+                        disabled={invoices.length === 0 || !hasActiveLease}
                       />
                       {preview ? (
                         <div className="relative">
@@ -285,7 +299,7 @@ export default function TenantSubmitPaymentPage() {
 
                   <button
                     type="submit"
-                    disabled={uploading || invoices.length === 0 || !file}
+                    disabled={uploading || invoices.length === 0 || !file || !hasActiveLease}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20 cursor-pointer"
                   >
                     {uploading ? (

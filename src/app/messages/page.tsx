@@ -74,6 +74,12 @@ export default function MessagesPage() {
     }> = {};
 
     messages.forEach((msg) => {
+      // Determine if it is a support message (either sent to admin, or involves a SAAS_ADMIN user)
+      const isSupportMessage =
+        msg.to_admin ||
+        msg.sender?.global_role === "SAAS_ADMIN" ||
+        msg.receiver?.global_role === "SAAS_ADMIN";
+
       // Determine thread key
       let key = "";
       let threadName = "";
@@ -81,14 +87,18 @@ export default function MessagesPage() {
       let isSupport = false;
       let supportSenderId = "";
 
-      if (msg.to_admin) {
+      if (isSupportMessage) {
         isSupport = true;
         if (user.global_role === "SAAS_ADMIN") {
-          // Admin sees support threads grouped by the sender
-          key = `support-${msg.sender_id}`;
-          threadName = `${msg.sender.first_name} ${msg.sender.last_name}`;
-          threadRole = `Support Request (${msg.sender.global_role})`;
-          supportSenderId = msg.sender_id;
+          // Admin groups support threads by the other user (the sender of support request)
+          const otherUserId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
+          const otherUser = msg.sender_id === user.id ? msg.receiver : msg.sender;
+          if (!otherUserId) return;
+
+          key = `support-${otherUserId}`;
+          threadName = otherUser ? `${otherUser.first_name} ${otherUser.last_name}` : "System User";
+          threadRole = `Support Request (${otherUser?.global_role || "USER"})`;
+          supportSenderId = otherUserId;
         } else {
           // Tenant/Landlord see support thread as one single "System Support" thread
           key = "support";
@@ -303,19 +313,19 @@ export default function MessagesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-0.5">
-                      <p className="text-xs font-extrabold truncate">{t.name}</p>
-                      <span className={`text-[9px] font-mono ${
+                      <p className="text-sm font-bold truncate text-foreground leading-snug">{t.name}</p>
+                      <span className={`text-[10px] font-mono ${
                         activeThreadId === t.id ? "text-primary-foreground/75" : "text-muted-foreground"
                       }`}>
                         {t.lastTime ? new Date(t.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                       </span>
                     </div>
-                    <p className={`text-[10px] uppercase font-extrabold tracking-wider mb-1 ${
+                    <p className={`text-[10.5px] uppercase font-extrabold tracking-wider mb-1 ${
                       activeThreadId === t.id ? "text-primary-foreground/90" : "text-muted-foreground/70"
                     }`}>
                       {t.role}
                     </p>
-                    <p className={`text-[11px] truncate ${
+                    <p className={`text-xs truncate ${
                       activeThreadId === t.id ? "text-primary-foreground/80" : "text-muted-foreground"
                     }`}>
                       {t.lastMessage}
@@ -345,8 +355,8 @@ export default function MessagesPage() {
                     {activeThread.isSupport ? <LifeBuoy className="h-5 w-5" /> : activeThread.name[0]}
                   </div>
                   <div>
-                    <h3 className="text-sm font-extrabold">{activeThread.name}</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{activeThread.role}</p>
+                    <h3 className="text-base font-bold text-foreground leading-snug">{activeThread.name}</h3>
+                    <p className="text-[10.5px] text-muted-foreground uppercase font-bold tracking-wider">{activeThread.role}</p>
                   </div>
                 </div>
               </div>

@@ -50,12 +50,20 @@ export default function TenantSupportPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
+  const [hasActiveLease, setHasActiveLease] = useState<boolean>(true);
+
   const fetchTickets = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get("/support");
-      setTickets(res.data);
+      const [ticketsRes, profileRes] = await Promise.all([
+        api.get("/support"),
+        api.get("/tenants/profile"),
+      ]);
+      setTickets(ticketsRes.data);
+      const profile = profileRes.data;
+      const active = Array.isArray(profile?.rental_agreements) && profile.rental_agreements.some((a: any) => a.status === "ACTIVE");
+      setHasActiveLease(active);
     } catch {
       setError("Failed to load your support tickets.");
     } finally {
@@ -95,12 +103,20 @@ export default function TenantSupportPage() {
           <p className="text-sm text-muted-foreground">Submit and track your maintenance requests and complaints.</p>
         </div>
         <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+          onClick={() => { if (hasActiveLease) setShowCreate(true); }}
+          disabled={!hasActiveLease}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="h-4 w-4" /> New Request
         </button>
       </div>
+
+      {!hasActiveLease && (
+        <div className="mt-4 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-semibold flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          You do not have an active lease agreement. You cannot submit new support tickets.
+        </div>
+      )}
 
       {/* Tickets */}
       {loading ? (
