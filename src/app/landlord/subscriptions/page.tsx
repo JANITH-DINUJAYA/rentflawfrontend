@@ -68,11 +68,12 @@ export default function LandlordSubscriptionsPage() {
     setUpgrading(true);
     setUpgradeError("");
     try {
-      // Free plan — upgrade directly without payment
-      if (upgradeTarget.price === 0) {
+      // Free plan or any plan switch directly — no PayHere for $0 plans
+      if (Number(upgradeTarget.price) === 0) {
         await api.post("/subscriptions/upgrade", { packageId: upgradeTarget.id });
         setUpgradeTarget(null);
         await fetchData();
+        setUpgrading(false);
         return;
       }
 

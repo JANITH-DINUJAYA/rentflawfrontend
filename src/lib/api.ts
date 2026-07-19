@@ -66,6 +66,14 @@ api.interceptors.response.use(
       }
     }
 
+    // Intercept 503 Service Unavailable (Maintenance Mode)
+    if (error.response?.status === 503) {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/maintenance') {
+        window.location.href = '/maintenance';
+      }
+    }
+
     return Promise.reject(error);
   },
 );
+
