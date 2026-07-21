@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
-  UploadCloud, FileCheck, AlertCircle, DollarSign, X, Loader2, CheckCircle2, AlertOctagon, Clock
+  UploadCloud, FileCheck, AlertCircle, DollarSign, X, Loader2, CheckCircle2, AlertOctagon, Clock, Landmark, Info
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ export default function TenantSubmitPaymentPage() {
   const [success, setSuccess] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [hasActiveLease, setHasActiveLease] = useState(true);
+  const [landlordBank, setLandlordBank] = useState<any>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadData = async (preselectedInvoiceId: string | null) => {
@@ -46,8 +47,13 @@ export default function TenantSubmitPaymentPage() {
       const unpaid = allInvoices.filter((inv: any) => inv.status === "PENDING" || inv.status === "OVERDUE");
       setInvoices(unpaid);
       
-      const active = Array.isArray(profileRes.data?.rental_agreements) && profileRes.data.rental_agreements.some((a: any) => a.status === "ACTIVE");
-      setHasActiveLease(active);
+      const activeAgreement = Array.isArray(profileRes.data?.rental_agreements)
+        ? profileRes.data.rental_agreements.find((a: any) => a.status === "ACTIVE")
+        : null;
+      setHasActiveLease(!!activeAgreement);
+      if (activeAgreement?.landlord) {
+        setLandlordBank(activeAgreement.landlord);
+      }
 
       const targetId = preselectedInvoiceId || (unpaid.length > 0 ? unpaid[0].id : "");
       if (targetId) {
@@ -319,6 +325,54 @@ export default function TenantSubmitPaymentPage() {
 
         {/* ─── Payment history list ──────────────── */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Landlord Bank Transfer Details */}
+          <Card className="border-primary/20 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Landmark className="h-4 w-4 text-primary" /> Bank Transfer Details
+              </CardTitle>
+              <CardDescription className="text-xs">Pay your landlord using the details below, then upload the receipt.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3.5 text-xs">
+              {landlordBank?.bank_name ? (
+                <div className="space-y-2.5 p-3.5 rounded-xl border border-border bg-card">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Bank Name:</span>
+                    <span className="font-bold text-foreground">{landlordBank.bank_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Account Holder:</span>
+                    <span className="font-bold text-foreground">{landlordBank.account_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Account Number:</span>
+                    <span className="font-bold text-foreground select-all">{landlordBank.account_number}</span>
+                  </div>
+                  {landlordBank.branch_name && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Branch:</span>
+                      <span className="font-bold text-foreground">{landlordBank.branch_name}</span>
+                    </div>
+                  )}
+                  {landlordBank.swift_code && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">SWIFT / BIC:</span>
+                      <span className="font-bold text-foreground select-all">{landlordBank.swift_code}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 font-medium flex items-start gap-2 leading-relaxed">
+                  <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-[11px] uppercase tracking-wide">No bank details added by landlord</p>
+                    <p className="text-[10px] mt-0.5 opacity-90">Please contact your landlord directly to obtain their bank transfer details.</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-bold">Verification History</CardTitle>

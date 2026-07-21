@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { TableExportControls } from "@/components/table-export-controls";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -144,31 +145,41 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tenant, invoice ID..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="h-4 w-4 text-muted-foreground hidden sm:inline" />
-          <Select value={statusFilter} onValueChange={(v) => v !== null && setStatusFilter(v)}>
-            <SelectTrigger className="w-full sm:w-44">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Statuses</SelectItem>
-              <SelectItem value="PENDING">Pending</SelectItem>
-              <SelectItem value="PAID">Paid</SelectItem>
-              <SelectItem value="OVERDUE">Overdue</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Table Export Controls */}
+      <div className="mt-6">
+        <TableExportControls
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search invoices by tenant, ID or property..."
+          filterValue={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="All Statuses"
+          filterOptions={[
+            { label: "Pending", value: "PENDING" },
+            { label: "Paid", value: "PAID" },
+            { label: "Overdue", value: "OVERDUE" },
+          ]}
+          tableData={filteredInvoices.map(inv => ({
+            id: inv.id,
+            tenant: inv.agreement?.tenant ? `${inv.agreement.tenant.first_name} ${inv.agreement.tenant.last_name}` : "N/A",
+            property: inv.agreement?.property?.name || "N/A",
+            type: inv.type,
+            amount: `$${Number(inv.total_due).toFixed(2)}`,
+            due_date: new Date(inv.due_date).toLocaleDateString(),
+            status: inv.status,
+          }))}
+          columns={[
+            { key: "id", label: "Invoice ID" },
+            { key: "tenant", label: "Tenant" },
+            { key: "property", label: "Property" },
+            { key: "type", label: "Type" },
+            { key: "amount", label: "Total Amount" },
+            { key: "due_date", label: "Due Date" },
+            { key: "status", label: "Status" },
+          ]}
+          filename="invoices_report"
+          title="Invoices Management Report"
+        />
       </div>
 
       {/* Invoices Table */}

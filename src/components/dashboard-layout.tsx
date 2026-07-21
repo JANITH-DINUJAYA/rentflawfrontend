@@ -267,7 +267,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const BrandIcon = config.brandIcon;
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <div className="portal-sidebar flex flex-col h-full transition-colors duration-200">
       {/* ── Brand Header ── */}
       <div className="flex items-center gap-3 px-5 h-[64px] border-b"
@@ -374,7 +374,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className={`${config.portalClass} flex min-h-screen bg-background`}>
       {/* ─── Sidebar (Desktop) ─── */}
       <aside className="hidden lg:block w-64 fixed inset-y-0 left-0 z-30">
-        <SidebarContent />
+        {renderSidebarContent()}
       </aside>
 
       {/* ─── Main Content ─── */}
@@ -391,7 +391,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <Menu className="h-5 w-5" />
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-64">
-                <SidebarContent />
+                {renderSidebarContent()}
               </SheetContent>
             </Sheet>
 

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
+import { TableExportControls } from "@/components/table-export-controls";
 
 type AgreementStatus = "DRAFT" | "ACTIVE" | "EXPIRED" | "TERMINATED" | "TERMINATION_REQUESTED";
 
@@ -51,6 +52,9 @@ export default function LandlordAgreementsPage() {
   const [deductionReason, setDeductionReason] = useState("");
   const [terminationCost, setTerminationCost] = useState<any | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ALL");
 
   const fetchAgreements = async () => {
     setLoading(true);
@@ -177,6 +181,55 @@ export default function LandlordAgreementsPage() {
         </div>
       )}
 
+      {/* Table Export Controls */}
+      <div className="mt-6">
+        <TableExportControls
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search agreements by tenant name, property or room..."
+          filterValue={filterStatus}
+          onFilterChange={setFilterStatus}
+          filterLabel="All Statuses"
+          filterOptions={[
+            { label: "Draft", value: "DRAFT" },
+            { label: "Active", value: "ACTIVE" },
+            { label: "Expired", value: "EXPIRED" },
+            { label: "Terminated", value: "TERMINATED" },
+            { label: "Leave Requested", value: "TERMINATION_REQUESTED" },
+          ]}
+          tableData={agreements
+            .filter(a => {
+              const matchesSearch =
+                a.tenant.first_name.toLowerCase().includes(search.toLowerCase()) ||
+                a.tenant.last_name.toLowerCase().includes(search.toLowerCase()) ||
+                a.property.name.toLowerCase().includes(search.toLowerCase()) ||
+                a.room.room_number.toLowerCase().includes(search.toLowerCase());
+              const matchesStatus = filterStatus === "ALL" || a.status === filterStatus;
+              return matchesSearch && matchesStatus;
+            })
+            .map(a => ({
+              tenant: `${a.tenant.first_name} ${a.tenant.last_name}`,
+              property_room: `${a.property.name} / Rm ${a.room.room_number}`,
+              rent: `$${Number(a.rent_amount).toFixed(2)}`,
+              collection: `Day ${a.collection_day}`,
+              start_date: new Date(a.start_date).toLocaleDateString(),
+              end_date: new Date(a.end_date).toLocaleDateString(),
+              status: a.status,
+            }))}
+          columns={[
+            { key: "tenant", label: "Tenant" },
+            { key: "property_room", label: "Property / Room" },
+            { key: "rent", label: "Rent" },
+            { key: "collection", label: "Collection Day" },
+            { key: "start_date", label: "Start Date" },
+            { key: "end_date", label: "End Date" },
+            { key: "status", label: "Status" },
+          ]}
+          filename="agreements_report"
+          title="Rental Agreements Report"
+        />
+      </div>
+
       {/* Agreements Table */}
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -202,13 +255,29 @@ export default function LandlordAgreementsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {agreements.length === 0 ? (
+                {agreements.filter(a => {
+                  const matchesSearch =
+                    a.tenant.first_name.toLowerCase().includes(search.toLowerCase()) ||
+                    a.tenant.last_name.toLowerCase().includes(search.toLowerCase()) ||
+                    a.property.name.toLowerCase().includes(search.toLowerCase()) ||
+                    a.room.room_number.toLowerCase().includes(search.toLowerCase());
+                  const matchesStatus = filterStatus === "ALL" || a.status === filterStatus;
+                  return matchesSearch && matchesStatus;
+                }).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
-                      No agreements yet. Create a rental agreement to get started.
+                      No agreements found.
                     </TableCell>
                   </TableRow>
-                ) : agreements.map(agr => {
+                ) : agreements.filter(a => {
+                  const matchesSearch =
+                    a.tenant.first_name.toLowerCase().includes(search.toLowerCase()) ||
+                    a.tenant.last_name.toLowerCase().includes(search.toLowerCase()) ||
+                    a.property.name.toLowerCase().includes(search.toLowerCase()) ||
+                    a.room.room_number.toLowerCase().includes(search.toLowerCase());
+                  const matchesStatus = filterStatus === "ALL" || a.status === filterStatus;
+                  return matchesSearch && matchesStatus;
+                }).map(agr => {
                   const s = statusConfig[agr.status];
                   return (
                     <TableRow key={agr.id} className={`hover:bg-accent/20 transition-colors ${agr.status === "TERMINATION_REQUESTED" ? "bg-yellow-500/5" : ""}`}>

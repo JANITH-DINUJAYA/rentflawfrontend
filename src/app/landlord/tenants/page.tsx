@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TableExportControls } from "@/components/table-export-controls";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 
@@ -249,36 +250,41 @@ export default function TenantsPage() {
         </button>
       </div>
 
-      {/* Quick Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tenant name, email or code..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(["ALL", "ACTIVE", "INVITED", "ENDED"] as const).map(status => {
-            const count = status === "ALL" ? tenants.length : tenants.filter(t => t.status === status).length;
-            const isActive = statusFilter === status;
-            return (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? "bg-primary text-primary-foreground border-primary shadow-md"
-                    : "bg-card border-border text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                {status === "ALL" ? "All" : status.charAt(0) + status.slice(1).toLowerCase()} ({count})
-              </button>
-            );
-          })}
-        </div>
+      {/* Table Export Controls */}
+      <div className="mt-6">
+        <TableExportControls
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search tenants by name, email or code..."
+          filterValue={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="All Statuses"
+          filterOptions={[
+            { label: "Active", value: "ACTIVE" },
+            { label: "Invited", value: "INVITED" },
+            { label: "Ended", value: "ENDED" },
+          ]}
+          tableData={filtered.map(t => ({
+            name: t.name,
+            email: t.email,
+            phone: t.phone,
+            tenant_code: t.tenantCode,
+            property: t.propertyName || "N/A",
+            room: t.roomNumber || "N/A",
+            status: t.status,
+          }))}
+          columns={[
+            { key: "name", label: "Name" },
+            { key: "email", label: "Email" },
+            { key: "phone", label: "Phone" },
+            { key: "tenant_code", label: "Tenant Code" },
+            { key: "property", label: "Property" },
+            { key: "room", label: "Room" },
+            { key: "status", label: "Status" },
+          ]}
+          filename="tenants_report"
+          title="Tenants Directory Report"
+        />
       </div>
 
       {/* Tenants Table */}

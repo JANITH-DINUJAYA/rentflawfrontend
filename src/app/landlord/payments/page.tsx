@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { TableExportControls } from "@/components/table-export-controls";
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
@@ -117,28 +118,39 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tenant or invoice..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(v) => v !== null && setStatusFilter(v)}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Submissions</SelectItem>
-            <SelectItem value="PENDING_REVIEW">Pending Review</SelectItem>
-            <SelectItem value="APPROVED">Approved</SelectItem>
-            <SelectItem value="REJECTED">Rejected</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Table Export Controls */}
+      <div className="mt-6">
+        <TableExportControls
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search payments by tenant or invoice..."
+          filterValue={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="All Statuses"
+          filterOptions={[
+            { label: "Pending Review", value: "PENDING_REVIEW" },
+            { label: "Approved", value: "APPROVED" },
+            { label: "Rejected", value: "REJECTED" },
+          ]}
+          tableData={filtered.map(p => ({
+            tenant: p.tenant ? `${p.tenant.first_name} ${p.tenant.last_name}` : "N/A",
+            invoice_id: p.invoice_id || "N/A",
+            amount: `$${Number(p.amount_paid).toFixed(2)}`,
+            method: p.payment_method || "SLIP_UPLOAD",
+            date: new Date(p.submitted_at).toLocaleDateString(),
+            status: p.status,
+          }))}
+          columns={[
+            { key: "tenant", label: "Tenant" },
+            { key: "invoice_id", label: "Invoice ID" },
+            { key: "amount", label: "Amount Paid" },
+            { key: "method", label: "Method" },
+            { key: "date", label: "Date Submitted" },
+            { key: "status", label: "Status" },
+          ]}
+          filename="payments_report"
+          title="Payment Submissions Report"
+        />
       </div>
 
       {/* Payments Table */}

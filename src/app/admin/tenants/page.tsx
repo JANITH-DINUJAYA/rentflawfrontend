@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Search, Loader2, AlertCircle, Plus, Edit2, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { TableExportControls } from "@/components/table-export-controls";
 
 interface Tenant {
   id: string;
@@ -157,23 +158,41 @@ export default function AdminTenantsPage() {
           <h2 className="text-2xl font-bold tracking-tight">Tenant Accounts</h2>
           <p className="text-sm text-muted-foreground">All registered tenants across the platform.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-background w-full sm:w-60">
-            <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <input
-              className="text-sm bg-transparent outline-none flex-1 placeholder:text-muted-foreground"
-              placeholder="Search..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer whitespace-nowrap"
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> Create Tenant
-          </button>
-        </div>
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer whitespace-nowrap"
+        >
+          <Plus className="mr-1.5 h-4 w-4" /> Create Tenant
+        </button>
+      </div>
+
+      {/* Table Export Controls */}
+      <div className="mt-6">
+        <TableExportControls
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search tenants by name, email or code..."
+          tableData={filtered.map(t => ({
+            name: `${t.first_name} ${t.last_name}`,
+            tenant_code: t.tenant_code || "N/A",
+            email: t.email,
+            phone: t.phone,
+            nic_passport: t.nic_or_passport,
+            agreements: `${t.rental_agreements?.length || 0} leases`,
+            joined_date: new Date(t.created_at).toLocaleDateString(),
+          }))}
+          columns={[
+            { key: "name", label: "Tenant Name" },
+            { key: "tenant_code", label: "Share Code" },
+            { key: "email", label: "Email" },
+            { key: "phone", label: "Phone" },
+            { key: "nic_passport", label: "NIC / Passport" },
+            { key: "agreements", label: "Agreements Count" },
+            { key: "joined_date", label: "Joined Date" },
+          ]}
+          filename="tenants_report"
+          title="Tenant Accounts Report"
+        />
       </div>
 
       {loading ? (

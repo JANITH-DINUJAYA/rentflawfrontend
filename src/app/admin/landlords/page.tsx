@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Building2, Search, Loader2, AlertCircle, Plus, Edit2, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { TableExportControls } from "@/components/table-export-controls";
 
 interface Landlord {
   id: string;
@@ -168,23 +169,41 @@ export default function AdminLandlordsPage() {
           <h2 className="text-2xl font-bold tracking-tight">Landlord Accounts</h2>
           <p className="text-sm text-muted-foreground">All registered landlords on the RentFlaw platform.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-background w-full sm:w-60">
-            <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <input
-              className="text-sm bg-transparent outline-none flex-1 placeholder:text-muted-foreground"
-              placeholder="Search..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer whitespace-nowrap"
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> Create Landlord
-          </button>
-        </div>
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer whitespace-nowrap"
+        >
+          <Plus className="mr-1.5 h-4 w-4" /> Create Landlord
+        </button>
+      </div>
+
+      {/* Table Export Controls */}
+      <div className="mt-6">
+        <TableExportControls
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search landlords by name, email or company..."
+          tableData={filtered.map(l => ({
+            name: `${l.user.first_name} ${l.user.last_name}`,
+            email: l.user.email,
+            phone: l.user.phone,
+            company: l.company_name || "N/A",
+            nic_passport: l.user.nic_or_passport,
+            subscription: l.subscription?.package?.name || "None",
+            joined_date: new Date(l.user.created_at).toLocaleDateString(),
+          }))}
+          columns={[
+            { key: "name", label: "Landlord Name" },
+            { key: "email", label: "Email" },
+            { key: "phone", label: "Phone" },
+            { key: "company", label: "Company" },
+            { key: "nic_passport", label: "NIC / Passport" },
+            { key: "subscription", label: "Subscription" },
+            { key: "joined_date", label: "Joined Date" },
+          ]}
+          filename="landlords_report"
+          title="Landlord Accounts Report"
+        />
       </div>
 
       {loading ? (

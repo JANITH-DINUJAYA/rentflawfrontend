@@ -172,9 +172,44 @@
 /* ═══════════════════════════════════════════════════
    PORTAL: SAAS ADMIN
    Identity: Deep Violet/Indigo — Authority & Control
-   Sidebar: Dark charcoal-indigo with violet accents
-═══════════════════════════════════════════════════ */
+   Supports Light & Dark Modes
+   Primary Color: Violet
+   Light Theme: Clean violet highlights
+   Dark Theme: Charcoal-indigo dark portal
+   ═══════════════════════════════════════════════════ */
 .portal-admin {
+  --portal-sidebar-bg: oklch(1 0 0);
+  --portal-sidebar-fg: oklch(0.25 0.08 295);
+  --portal-sidebar-muted: oklch(0.55 0.05 295);
+  --portal-sidebar-border: oklch(0.92 0.01 295);
+  --portal-sidebar-active-bg: oklch(0.56 0.26 295);
+  --portal-sidebar-active-fg: oklch(1 0 0);
+  --portal-sidebar-hover-bg: oklch(0.95 0.02 295);
+  --portal-sidebar-hover-fg: oklch(0.25 0.08 295);
+  --portal-sidebar-logo-bg: oklch(0.56 0.26 295);
+  --portal-sidebar-logo-fg: oklch(1 0 0);
+  --portal-header-bg: rgba(255, 255, 255, 0.85);
+  --portal-header-fg: oklch(0.15 0.08 295);
+  --portal-role-badge: oklch(0.56 0.26 295);
+  --portal-role-badge-fg: oklch(1 0 0);
+  --portal-role-label: "Admin Console";
+  /* Override global colors for Admin Portal in Light Mode */
+  --primary: oklch(0.56 0.26 295);
+  --primary-foreground: oklch(1 0 0);
+  --background: oklch(0.99 0.01 295);
+  --foreground: oklch(0.15 0.08 295);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.08 295);
+  --muted: oklch(0.96 0.01 295);
+  --muted-foreground: oklch(0.50 0.03 295);
+  --border: oklch(0.92 0.01 295);
+  --accent: oklch(0.95 0.02 295);
+  --accent-foreground: oklch(0.25 0.08 295);
+  --input: oklch(0.92 0.01 295);
+  --ring: oklch(0.56 0.26 295);
+}
+
+.dark .portal-admin {
   --portal-sidebar-bg: oklch(0.14 0.055 278);
   --portal-sidebar-fg: oklch(0.90 0.03 280);
   --portal-sidebar-muted: oklch(0.62 0.04 280);
@@ -187,13 +222,9 @@
   --portal-sidebar-logo-fg: oklch(1 0 0);
   --portal-header-bg: oklch(0.16 0.06 278);
   --portal-header-fg: oklch(0.96 0.01 280);
-  --portal-role-badge: oklch(0.56 0.26 295);
-  --portal-role-badge-fg: oklch(1 0 0);
-  --portal-role-label: "Admin Console";
-  /* Override global primary to violet for admin portal */
+  /* Override global colors for Admin Portal in Dark Mode */
   --primary: oklch(0.56 0.26 295);
   --primary-foreground: oklch(1 0 0);
-  /* Tint the card/background in admin portal for dark coherence */
   --background: oklch(0.11 0.04 278);
   --foreground: oklch(0.95 0.01 280);
   --card: oklch(0.16 0.045 278);
@@ -204,24 +235,13 @@
   --accent: oklch(0.20 0.05 278);
   --accent-foreground: oklch(0.92 0.02 280);
   --input: oklch(1 0 0 / 10%);
-}
-
-.dark .portal-admin {
-  --portal-sidebar-bg: oklch(0.13 0.06 280);
-  --portal-sidebar-fg: oklch(0.88 0.03 280);
-  --portal-sidebar-muted: oklch(0.55 0.04 280);
-  --portal-sidebar-border: oklch(1 0 0 / 7%);
-  --portal-sidebar-active-bg: oklch(0.62 0.24 300);
-  --portal-sidebar-active-fg: oklch(1 0 0);
-  --portal-sidebar-hover-bg: oklch(0.20 0.06 280);
-  --portal-sidebar-hover-fg: oklch(0.95 0.02 280);
+  --ring: oklch(0.56 0.26 295);
 }
 
 /* ═══════════════════════════════════════════════════
    PORTAL: TENANT
    Identity: Teal/Cyan — Friendly & Approachable
-   Sidebar: Soft light with teal-green accents
-═══════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 .portal-tenant {
   --portal-sidebar-bg: oklch(0.98 0.01 185);
   --portal-sidebar-fg: oklch(0.22 0.05 200);
@@ -233,7 +253,7 @@
   --portal-sidebar-hover-fg: oklch(0.22 0.05 200);
   --portal-sidebar-logo-bg: oklch(0.50 0.16 185);
   --portal-sidebar-logo-fg: oklch(1 0 0);
-  --portal-header-bg: rgba(245,252,252,0.88);
+  --portal-header-bg: rgba(245, 252, 252, 0.88);
   --portal-role-badge: oklch(0.50 0.16 185);
   --portal-role-badge-fg: oklch(1 0 0);
   --portal-role-label: "Tenant Portal";

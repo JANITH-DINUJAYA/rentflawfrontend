@@ -2,11 +2,13 @@
 
 import React from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { useTheme, ColorTheme } from "@/components/theme-provider";
+import { Palette } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
-import { User, KeyRound, Check, AlertCircle, Copy } from "lucide-react";
+import { User, KeyRound, Check, AlertCircle, Copy, Landmark } from "lucide-react";
 
 export default function ProfilePage() {
   const [profile, setProfile] = React.useState<any>(null);
@@ -28,6 +30,16 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = React.useState("");
   const [passwordPending, setPasswordPending] = React.useState(false);
 
+  // Landlord bank details states
+  const [bankName, setBankName] = React.useState("");
+  const [accountName, setAccountName] = React.useState("");
+  const [accountNumber, setAccountNumber] = React.useState("");
+  const [branchName, setBranchName] = React.useState("");
+  const [swiftCode, setSwiftCode] = React.useState("");
+  const [bankSuccess, setBankSuccess] = React.useState("");
+  const [bankError, setBankError] = React.useState("");
+  const [bankPending, setBankPending] = React.useState(false);
+
   const [copied, setCopied] = React.useState(false);
 
   const fetchProfile = React.useCallback(async () => {
@@ -37,6 +49,15 @@ export default function ProfilePage() {
       setFirstName(res.data.first_name || "");
       setLastName(res.data.last_name || "");
       setPhone(res.data.phone || "");
+
+      const lp = res.data.landlord_profile;
+      if (lp) {
+        setBankName(lp.bank_name || "");
+        setAccountName(lp.account_name || "");
+        setAccountNumber(lp.account_number || "");
+        setBranchName(lp.branch_name || "");
+        setSwiftCode(lp.swift_code || "");
+      }
     } catch (err) {
       console.error("Failed to load profile", err);
     } finally {
@@ -66,6 +87,29 @@ export default function ProfilePage() {
       setProfileError(err.response?.data?.message || "Failed to update profile");
     } finally {
       setProfilePending(false);
+    }
+  };
+
+  const handleUpdateBankDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBankSuccess("");
+    setBankError("");
+    setBankPending(true);
+
+    try {
+      await api.patch("/landlords/profile", {
+        bank_name: bankName,
+        account_name: accountName,
+        account_number: accountNumber,
+        branch_name: branchName,
+        swift_code: swiftCode,
+      });
+      setBankSuccess("Bank details updated successfully!");
+      fetchProfile();
+    } catch (err: any) {
+      setBankError(err.response?.data?.message || "Failed to update bank details");
+    } finally {
+      setBankPending(false);
     }
   };
 
@@ -310,7 +354,7 @@ export default function ProfilePage() {
                     <button
                       type="submit"
                       disabled={passwordPending}
-                      className="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-all duration-200"
+                      className="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-all duration-200 cursor-pointer"
                     >
                       {passwordPending ? "Updating Password..." : "Update Password"}
                     </button>
@@ -318,9 +362,148 @@ export default function ProfilePage() {
                 </form>
               </CardContent>
             </Card>
+
+            {/* Landlord Bank Transfer Details */}
+            {profile?.global_role === "LANDLORD" && (
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Landmark className="h-4.5 w-4.5 text-primary" /> Bank Transfer Details
+                  </CardTitle>
+                  <CardDescription>Configure the bank details that tenants will use to pay their invoices.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleUpdateBankDetails} className="space-y-4">
+                    {bankSuccess && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium border border-emerald-500/20">
+                        <Check className="h-4 w-4" /> {bankSuccess}
+                      </div>
+                    )}
+                    {bankError && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
+                        <AlertCircle className="h-4 w-4" /> {bankError}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="bankName">Bank Name</Label>
+                        <Input
+                          id="bankName"
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                          placeholder="e.g. Commercial Bank"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="accountName">Account Holder Name</Label>
+                        <Input
+                          id="accountName"
+                          value={accountName}
+                          onChange={(e) => setAccountName(e.target.value)}
+                          placeholder="e.g. John Doe Properties"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <Label htmlFor="accountNumber">Account Number</Label>
+                        <Input
+                          id="accountNumber"
+                          value={accountNumber}
+                          onChange={(e) => setAccountNumber(e.target.value)}
+                          placeholder="e.g. 1000984832"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="branchName">Branch Name</Label>
+                        <Input
+                          id="branchName"
+                          value={branchName}
+                          onChange={(e) => setBranchName(e.target.value)}
+                          placeholder="e.g. Colombo 07"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="swiftCode">SWIFT / BIC Code (Optional)</Label>
+                      <Input
+                        id="swiftCode"
+                        value={swiftCode}
+                        onChange={(e) => setSwiftCode(e.target.value)}
+                        placeholder="e.g. CCEYLKXX"
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        disabled={bankPending}
+                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-all duration-200 cursor-pointer"
+                      >
+                        {bankPending ? "Saving Bank Details..." : "Save Bank Details"}
+                      </button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Customize Primary Color Theme */}
+            <ThemeSwitcherCard />
           </div>
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function ThemeSwitcherCard() {
+  const { colorTheme, setColorTheme } = useTheme();
+
+  const themes: { id: ColorTheme; label: string; bg: string; border: string }[] = [
+    { id: "shamrock", label: "Shamrock Green", bg: "bg-emerald-500", border: "border-emerald-500/20" },
+    { id: "ocean", label: "Ocean Blue", bg: "bg-blue-500", border: "border-blue-500/20" },
+    { id: "violet", label: "Royal Violet", bg: "bg-violet-500", border: "border-violet-500/20" },
+    { id: "sunset", label: "Sunset Orange", bg: "bg-amber-500", border: "border-amber-500/20" },
+    { id: "rose", label: "Blossom Rose", bg: "bg-rose-500", border: "border-rose-500/20" },
+    { id: "slate", label: "Modern Slate", bg: "bg-slate-500", border: "border-slate-500/20" },
+  ];
+
+  return (
+    <Card className="shadow-md">
+      <CardHeader>
+        <CardTitle className="text-base font-bold flex items-center gap-2">
+          <Palette className="h-4.5 w-4.5 text-primary" /> Primary Accent Color
+        </CardTitle>
+        <CardDescription>Select your preferred primary theme color for the workspace dashboard.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {themes.map((t) => {
+            const isActive = colorTheme === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setColorTheme(t.id)}
+                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                    : "border-border bg-card hover:bg-accent/40"
+                }`}
+              >
+                <span className={`h-4 w-4 rounded-full ${t.bg} border ${t.border} flex-shrink-0`} />
+                <span className="text-xs font-bold">{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

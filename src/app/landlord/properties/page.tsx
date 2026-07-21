@@ -9,7 +9,10 @@ import {
   Plus, 
   AlertTriangle,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Pencil,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { TableExportControls } from "@/components/table-export-controls";
 
 type PropertyType = "APARTMENT" | "BOARDING_HOUSE" | "HOSTEL" | "RENTAL_HOUSE";
 
@@ -40,6 +44,17 @@ export default function PropertiesPage() {
   const [address, setAddress] = useState("");
   const [type, setType] = useState<PropertyType>("APARTMENT");
   const [formError, setFormError] = useState("");
+
+  // Edit states
+  const [editingProperty, setEditingProperty] = useState<BackendProperty | null>(null);
+
+  // Multi-select states
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkArchiving, setBulkArchiving] = useState(false);
+
+  // TableExportControls states
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("ALL");
 
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
@@ -92,11 +107,37 @@ export default function PropertiesPage() {
     }
   };
 
+  const handleEditProperty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+    setCreateLoading(true);
+    setFormError("");
+    try {
+      await api.patch(`/properties/${editingProperty.id}`, {
+        name: name.trim(),
+        address: address.trim(),
+        type,
+      });
+      setEditingProperty(null);
+      setName("");
+      setAddress("");
+      setType("APARTMENT");
+      await fetchProperties();
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.response?.data?.message;
+      setFormError(Array.isArray(msg) ? msg[0] : msg || "Failed to update property.");
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const handleArchiveProperty = async (id: string) => {
     setArchiveLoading(true);
     try {
       await api.patch(`/properties/${id}/archive`);
       setConfirmArchiveId(null);
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
       await fetchProperties();
     } catch (err: any) {
       console.error(err);
@@ -105,6 +146,39 @@ export default function PropertiesPage() {
       setConfirmArchiveId(null);
     } finally {
       setArchiveLoading(false);
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Are you sure you want to archive the ${selectedIds.length} selected properties?`)) return;
+    setBulkArchiving(true);
+    try {
+      await api.post('/properties/bulk-archive', { ids: selectedIds });
+      setSelectedIds([]);
+      await fetchProperties();
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.response?.data?.message;
+      alert(Array.isArray(msg) ? msg[0] : msg || "Failed to bulk archive selected properties.");
+    } finally {
+      setBulkArchiving(false);
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = (filteredProps: BackendProperty[]) => {
+    const filteredIds = filteredProps.map(p => p.id);
+    const allSelected = filteredIds.every(id => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      setSelectedIds(prev => [...new Set([...prev, ...filteredIds])]);
     }
   };
 
@@ -119,6 +193,36 @@ export default function PropertiesPage() {
     }
   };
 
+  // Filter and Search logic
+  const filteredProperties = properties.filter((p) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.address.toLowerCase().includes(search.toLowerCase());
+    const matchesType = filterType === "ALL" || p.type === filterType;
+    return matchesSearch && matchesType;
+  });
+
+  const propertyColumns = [
+    { key: "name", label: "Property Name" },
+    { key: "type", label: "Type" },
+    { key: "address", label: "Address" },
+  ];
+
+  const handleOpenAdd = () => {
+    setEditingProperty(null);
+    setName("");
+    setAddress("");
+    setType("APARTMENT");
+    setDialogOpen(true);
+  };
+
+  const handleOpenEdit = (p: BackendProperty) => {
+    setEditingProperty(p);
+    setName(p.name);
+    setAddress(p.address);
+    setType(p.type);
+  };
+
   return (
     <DashboardLayout>
       {/* ─── Page Header ───────────────────────────── */}
@@ -128,12 +232,51 @@ export default function PropertiesPage() {
           <p className="text-sm text-muted-foreground">Manage your physical buildings, layout structures, and room configurations.</p>
         </div>
         <button
-          onClick={() => setDialogOpen(true)}
+          onClick={handleOpenAdd}
           className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/10 transition-all duration-200 cursor-pointer"
         >
           <Plus className="mr-1.5 h-4 w-4" /> Add Property
         </button>
       </div>
+
+      {/* ─── Table Controls ─── */}
+      <div className="mt-6">
+        <TableExportControls
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search properties by name or address..."
+          filterValue={filterType}
+          onFilterChange={setFilterType}
+          filterLabel="All Property Types"
+          filterOptions={[
+            { label: "Apartment Building", value: "APARTMENT" },
+            { label: "Co-Living / Boarding", value: "BOARDING_HOUSE" },
+            { label: "Hostel", value: "HOSTEL" },
+            { label: "Rental House", value: "RENTAL_HOUSE" },
+          ]}
+          tableData={filteredProperties}
+          columns={propertyColumns}
+          filename="properties_report"
+          title="Properties Report"
+        />
+      </div>
+
+      {/* ─── Bulk Actions Header ─── */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between p-3.5 bg-destructive/10 border border-destructive/20 rounded-xl mb-4 animate-in fade-in slide-in-from-top-2">
+          <span className="text-xs font-bold text-destructive">
+            {selectedIds.length} properties selected
+          </span>
+          <button
+            onClick={handleBulkArchive}
+            disabled={bulkArchiving}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive text-white rounded-lg text-xs font-bold hover:bg-destructive/90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+          >
+            {bulkArchiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Archive Selected
+          </button>
+        </div>
+      )}
 
       {/* ─── Properties Grid ────────────────────────── */}
       {loading ? (
@@ -149,90 +292,124 @@ export default function PropertiesPage() {
             Try again
           </button>
         </div>
-      ) : properties.length === 0 ? (
+      ) : filteredProperties.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4">
             <Building className="h-7 w-7" />
           </div>
-          <h3 className="text-lg font-bold">No properties registered</h3>
+          <h3 className="text-lg font-bold">No properties found</h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-1">
-            Get started by adding your first apartment building, boarding house, or rental property.
+            Try adjusting your filters or add a new property building.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((p) => {
-            const floorsCount = p.floors?.length || 0;
-            const roomsCount = p.floors?.reduce((sum, f) => sum + (f.rooms?.length || 0), 0) || 0;
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <button
+              onClick={() => handleToggleSelectAll(filteredProperties)}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 font-semibold cursor-pointer"
+            >
+              {filteredProperties.every(id => selectedIds.includes(id.id)) ? (
+                <CheckSquare className="h-4.5 w-4.5 text-primary" />
+              ) : (
+                <Square className="h-4.5 w-4.5" />
+              )}
+              Select All Shown
+            </button>
+          </div>
 
-            return (
-              <Card key={p.id} className="hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-primary/20 group-hover:bg-primary transition-colors" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProperties.map((p) => {
+              const floorsCount = p.floors?.length || 0;
+              const roomsCount = p.floors?.reduce((sum, f) => sum + (f.rooms?.length || 0), 0) || 0;
+              const isSelected = selectedIds.includes(p.id);
 
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Badge variant="secondary" className="mb-2 text-[10px] uppercase font-bold tracking-wider">
-                        {getReadableType(p.type)}
-                      </Badge>
-                      <CardTitle className="text-lg font-bold">{p.name}</CardTitle>
-                    </div>
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                      <Building className="h-5 w-5" />
-                    </div>
-                  </div>
-                </CardHeader>
+              return (
+                <Card key={p.id} className={`hover:shadow-md transition-all duration-300 relative overflow-hidden group border ${
+                  isSelected ? "border-primary ring-1 ring-primary/20" : ""
+                }`}>
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-primary/20 group-hover:bg-primary transition-colors" />
 
-                <CardContent className="space-y-4 pb-6">
-                  <div className="flex items-center text-xs text-muted-foreground gap-1.5">
-                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{p.address}</span>
-                  </div>
+                  {/* Checkbox selector */}
+                  <button
+                    onClick={() => handleToggleSelect(p.id)}
+                    className="absolute top-3.5 right-3.5 z-10 p-1 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  >
+                    {isSelected ? <CheckSquare className="h-5 w-5 text-primary" /> : <Square className="h-5 w-5 opacity-60 hover:opacity-100" />}
+                  </button>
 
-                  <div className="grid grid-cols-2 gap-2 bg-accent/20 p-3 rounded-xl text-center">
-                    <div>
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Floors</p>
-                      <p className="text-lg font-extrabold">{floorsCount}</p>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between pr-6">
+                      <div>
+                        <Badge variant="secondary" className="mb-2 text-[10px] uppercase font-bold tracking-wider">
+                          {getReadableType(p.type)}
+                        </Badge>
+                        <CardTitle className="text-lg font-bold">{p.name}</CardTitle>
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                        <Building className="h-5 w-5" />
+                      </div>
                     </div>
-                    <div className="border-l border-border">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Rooms</p>
-                      <p className="text-lg font-extrabold">{roomsCount}</p>
-                    </div>
-                  </div>
+                  </CardHeader>
 
-                  {/* Card Footer Actions */}
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      ID: {p.id.slice(0, 8)}...
-                    </span>
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={() => setConfirmArchiveId(p.id)}
-                        className="p-2 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                        title="Archive Property"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                  <CardContent className="space-y-4 pb-6">
+                    <div className="flex items-center text-xs text-muted-foreground gap-1.5">
+                      <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate">{p.address}</span>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                    <div className="grid grid-cols-2 gap-2 bg-accent/20 p-3 rounded-xl text-center">
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Floors</p>
+                        <p className="text-lg font-extrabold">{floorsCount}</p>
+                      </div>
+                      <div className="border-l border-border">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Rooms</p>
+                        <p className="text-lg font-extrabold">{roomsCount}</p>
+                      </div>
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        ID: {p.id.slice(0, 8)}...
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleOpenEdit(p)}
+                          className="p-2 rounded-lg border border-border text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                          title="Edit Property"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setConfirmArchiveId(p.id)}
+                          className="p-2 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                          title="Archive Property"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* ─── Add Property Dialog ────────────────────── */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* ─── Add / Edit Property Dialog ────────────────────── */}
+      <Dialog open={dialogOpen || !!editingProperty} onOpenChange={() => { setDialogOpen(false); setEditingProperty(null); }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add New Property</DialogTitle>
+            <DialogTitle>{editingProperty ? "Edit Property" : "Add New Property"}</DialogTitle>
             <DialogDescription>
-              Create a new physical property profile. You can later add floors and rooms to this building.
+              {editingProperty ? "Update the property profile details below." : "Create a new physical property profile. You can later add floors and rooms to this building."}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateProperty} className="space-y-4 py-2">
+          <form onSubmit={editingProperty ? handleEditProperty : handleCreateProperty} className="space-y-4 py-2">
             {formError && (
               <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium flex items-center gap-1.5">
                 <AlertTriangle className="h-4 w-4" />
@@ -278,7 +455,7 @@ export default function PropertiesPage() {
             <DialogFooter className="pt-4">
               <button
                 type="button"
-                onClick={() => setDialogOpen(false)}
+                onClick={() => { setDialogOpen(false); setEditingProperty(null); }}
                 className="px-4 py-2 text-sm font-medium rounded-lg border border-border bg-card text-foreground hover:bg-accent/50 transition-all duration-200 cursor-pointer"
               >
                 Cancel
@@ -289,7 +466,7 @@ export default function PropertiesPage() {
                 className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all duration-200 flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
               >
                 {createLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Create Property
+                {editingProperty ? "Save Changes" : "Create Property"}
               </button>
             </DialogFooter>
           </form>
