@@ -343,7 +343,8 @@
   --primary-foreground: oklch(1 0 0);
 }
 
-.dark .portal-tenant {
+.dark .portal-tenant,
+.dark.portal-tenant {
   --portal-sidebar-bg: oklch(0.16 0.04 185);
   --portal-sidebar-fg: oklch(0.88 0.03 185);
   --portal-sidebar-muted: oklch(0.55 0.04 185);
@@ -352,6 +353,12 @@
   --portal-sidebar-active-fg: oklch(1 0 0);
   --portal-sidebar-hover-bg: oklch(0.22 0.05 185);
   --portal-sidebar-hover-fg: oklch(0.90 0.03 185);
+  --portal-sidebar-logo-bg: oklch(0.55 0.16 185);
+  --portal-sidebar-logo-fg: oklch(1 0 0);
+  --portal-header-bg: rgba(20, 32, 35, 0.88);
+  --portal-header-fg: oklch(0.95 0.02 185);
+  --portal-role-badge: oklch(0.55 0.16 185);
+  --portal-role-badge-fg: oklch(1 0 0);
   --primary: oklch(0.55 0.16 185);
 }
 
