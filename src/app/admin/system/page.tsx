@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, Shield, Server, RefreshCw, CheckCircle2, Play, Terminal, Loader2, AlertCircle, Mail } from "lucide-react";
+import { Settings, Shield, Server, RefreshCw, CheckCircle2, Play, Terminal, Loader2, AlertCircle, Mail, Building, Plus, Pencil, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface LogEntry {
@@ -170,7 +170,7 @@ export default function AdminSystemPage() {
                 <button
                   onClick={handleTestEmail}
                   disabled={testingEmail || !testEmailTo}
-                  className="w-full py-2.5 text-xs font-bold rounded-xl bg-primary text-primary-foreground shadow-md hover:bg-primary/95 disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 text-xs font-bold rounded-xl bg-primary text-primary-foreground shadow-md hover:bg-primary/95 disabled:opacity-40 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {testingEmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                   Send Test Email
@@ -198,7 +198,7 @@ export default function AdminSystemPage() {
               <button
                 onClick={fetchLogs}
                 disabled={logsLoading}
-                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors disabled:opacity-50"
+                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <RefreshCw className={`h-3 w-3 ${logsLoading ? "animate-spin" : ""}`} />
                 Refresh
@@ -237,6 +237,226 @@ export default function AdminSystemPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* System Bank Accounts Section */}
+      <SystemBankAccountsManager />
     </DashboardLayout>
+  );
+}
+
+// ─── SYSTEM BANK ACCOUNTS MANAGER ─────────────────────────
+function SystemBankAccountsManager() {
+  const [accounts, setAccounts] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [openModal, setOpenModal] = React.useState(false);
+  const [editingAccount, setEditingAccount] = React.useState<any | null>(null);
+  const [form, setForm] = React.useState({
+    bank_name: "",
+    account_name: "",
+    account_number: "",
+    branch_name: "",
+    swift_code: "",
+  });
+  const [saving, setSaving] = React.useState(false);
+
+  const fetchBankAccounts = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/system/bank-accounts?includeInactive=true");
+      setAccounts(res.data);
+    } catch (err) {
+      console.error("Failed to load bank accounts", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBankAccounts();
+  }, []);
+
+  const handleOpenAdd = () => {
+    setEditingAccount(null);
+    setForm({ bank_name: "", account_name: "", account_number: "", branch_name: "", swift_code: "" });
+    setOpenModal(true);
+  };
+
+  const handleOpenEdit = (acc: any) => {
+    setEditingAccount(acc);
+    setForm({
+      bank_name: acc.bank_name,
+      account_name: acc.account_name,
+      account_number: acc.account_number,
+      branch_name: acc.branch_name || "",
+      swift_code: acc.swift_code || "",
+    });
+    setOpenModal(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      if (editingAccount) {
+        await api.patch(`/system/bank-accounts/${editingAccount.id}`, form);
+      } else {
+        await api.post("/system/bank-accounts", form);
+      }
+      setOpenModal(false);
+      fetchBankAccounts();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Failed to save bank account");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this bank account?")) return;
+    try {
+      await api.delete(`/system/bank-accounts/${id}`);
+      fetchBankAccounts();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Failed to delete bank account");
+    }
+  };
+
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Building className="h-5 w-5 text-primary" /> Platform Bank Accounts (Offline Subscriptions)
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Bank accounts displayed to landlords for bank transfer subscription upgrades.
+            </p>
+          </div>
+          <button
+            onClick={handleOpenAdd}
+            className="px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl shadow hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Bank Account
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : accounts.length === 0 ? (
+          <p className="text-xs text-center py-8 text-muted-foreground">No bank accounts configured yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {accounts.map((acc) => (
+              <div key={acc.id} className="p-4 rounded-xl border border-border bg-accent/10 space-y-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-bold text-sm text-foreground">{acc.bank_name}</h4>
+                    <p className="text-xs text-muted-foreground font-mono">{acc.account_number}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEdit(acc)}
+                      className="p-1 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                      title="Edit"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(acc.id)}
+                      className="p-1 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="text-xs space-y-0.5 text-muted-foreground pt-1 border-t border-border/40">
+                  <p><span className="font-semibold text-foreground">Name:</span> {acc.account_name}</p>
+                  {acc.branch_name && <p><span className="font-semibold text-foreground">Branch:</span> {acc.branch_name}</p>}
+                  {acc.swift_code && <p><span className="font-semibold text-foreground">SWIFT:</span> {acc.swift_code}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      {/* Modal for Add / Edit */}
+      {openModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <h3 className="font-bold text-base">{editingAccount ? "Edit Bank Account" : "Add Platform Bank Account"}</h3>
+            <form onSubmit={handleSave} className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Bank Name</Label>
+                <Input
+                  required
+                  placeholder="e.g. Commercial Bank / HSBC"
+                  value={form.bank_name}
+                  onChange={e => setForm(f => ({ ...f, bank_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Account Name</Label>
+                <Input
+                  required
+                  placeholder="e.g. RentFlaw Technologies Pvt Ltd"
+                  value={form.account_name}
+                  onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Account Number</Label>
+                <Input
+                  required
+                  placeholder="e.g. 100029384756"
+                  value={form.account_number}
+                  onChange={e => setForm(f => ({ ...f, account_number: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Branch Name (Optional)</Label>
+                  <Input
+                    placeholder="e.g. Main Branch"
+                    value={form.branch_name}
+                    onChange={e => setForm(f => ({ ...f, branch_name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">SWIFT / BIC (Optional)</Label>
+                  <Input
+                    placeholder="e.g. COMBCEKL"
+                    value={form.swift_code}
+                    onChange={e => setForm(f => ({ ...f, swift_code: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setOpenModal(false)}
+                  className="px-4 py-2 text-xs rounded-xl border border-border hover:bg-accent cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }

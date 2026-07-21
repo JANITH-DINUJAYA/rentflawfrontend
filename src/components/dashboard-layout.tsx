@@ -28,10 +28,14 @@ import {
   ChevronRight,
   Activity,
   MessageSquare,
+  Sun,
+  Moon,
+  Trash2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +65,7 @@ const adminItems: SidebarItem[] = [
   { label: "Roles & Staff", href: "/admin/roles", icon: Shield, group: "Management", requiredPermission: "roles:read" },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: Gauge, group: "Billing", requiredPermission: "subscriptions:read" },
   { label: "System Config", href: "/admin/system", icon: Settings, group: "Billing", requiredPermission: "system:read" },
+  { label: "Trash Bin", href: "/admin/trash", icon: Trash2, group: "Billing" },
 ];
 
 const landlordItems: SidebarItem[] = [
@@ -79,6 +84,7 @@ const landlordItems: SidebarItem[] = [
   { label: "Reports", href: "/landlord/reports", icon: BarChart3, group: "Other", requiredPermission: "reports:read" },
   { label: "Roles & Staff", href: "/landlord/roles", icon: Shield, group: "Other", requiredPermission: "roles:read" },
   { label: "Subscriptions", href: "/landlord/subscriptions", icon: Crown, group: "Other", requiredPermission: "subscriptions:read" },
+  { label: "Trash Bin", href: "/landlord/trash", icon: Trash2, group: "Other" },
 ];
 
 const tenantItems: SidebarItem[] = [
@@ -212,6 +218,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const { modeTheme, setModeTheme } = useTheme();
+
   // Detect portal from URL path first — this works before auth is connected
   const portalRole: keyof typeof portalConfig =
     pathname.startsWith("/admin") ? "SAAS_ADMIN" :
@@ -340,14 +348,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </p>
           </div>
         </Link>
-        <button
-          onClick={logout}
-          title="Log Out"
-          style={{ color: "var(--portal-sidebar-muted)" }}
-          className="p-1.5 rounded-lg hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setModeTheme(modeTheme === "dark" ? "light" : "dark")}
+            title={`Switch to ${modeTheme === "dark" ? "Light" : "Dark"} Mode`}
+            style={{ color: "var(--portal-sidebar-muted)" }}
+            className="p-1.5 rounded-lg hover:bg-accent/20 transition-colors flex-shrink-0 cursor-pointer"
+          >
+            {modeTheme === "dark" ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-700" />}
+          </button>
+          <button
+            onClick={logout}
+            title="Log Out"
+            style={{ color: "var(--portal-sidebar-muted)" }}
+            className="p-1.5 rounded-lg hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0 cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -389,9 +407,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Theme mode toggle */}
+            <button
+              onClick={() => setModeTheme(modeTheme === "dark" ? "light" : "dark")}
+              title={`Switch to ${modeTheme === "dark" ? "Light" : "Dark"} Mode`}
+              className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
+            >
+              {modeTheme === "dark" ? <Sun className="h-4.5 w-4.5 text-amber-400" /> : <Moon className="h-4.5 w-4.5 text-slate-700" />}
+            </button>
+
             {/* Notification bell */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent/50 relative">
+              <DropdownMenuTrigger className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent/50 relative cursor-pointer">
                 <Bell className="h-4.5 w-4.5" />
                 {unreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive animate-pulse" />
