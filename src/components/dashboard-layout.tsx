@@ -66,6 +66,7 @@ const adminItems: SidebarItem[] = [
   { label: "Subscriptions", href: "/admin/subscriptions", icon: Gauge, group: "Billing", requiredPermission: "subscriptions:read" },
   { label: "System Config", href: "/admin/system", icon: Settings, group: "Billing", requiredPermission: "system:read" },
   { label: "Trash Bin", href: "/admin/trash", icon: Trash2, group: "Billing" },
+  { label: "Reports", href: "/admin/reports", icon: BarChart3, group: "Billing" },
 ];
 
 const landlordItems: SidebarItem[] = [

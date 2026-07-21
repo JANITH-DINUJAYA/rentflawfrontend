@@ -94,9 +94,12 @@ export default function AdminLoginPage() {
 
           {/* Password */}
           <div className="space-y-1.5">
-            <label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Admin Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Admin Password
+              </label>
+              <Link href="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
+            </div>
             <div className="relative">
               <input
                 id="password"

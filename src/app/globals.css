@@ -93,6 +93,88 @@
 }
 
 /* ═══════════════════════════════════════════════════
+   ACCENT COLOR THEMES — Light & Dark Mode
+   Overrides --primary and --ring values based on class
+═══════════════════════════════════════════════════ */
+.theme-shamrock {
+  --primary: oklch(0.62 0.19 145);
+  --ring: oklch(0.62 0.19 145);
+  --sidebar-primary: oklch(0.62 0.19 145);
+  --sidebar-ring: oklch(0.62 0.19 145);
+}
+.dark.theme-shamrock, .dark .theme-shamrock {
+  --primary: oklch(0.68 0.19 145);
+  --ring: oklch(0.68 0.19 145);
+  --sidebar-primary: oklch(0.68 0.19 145);
+  --sidebar-ring: oklch(0.68 0.19 145);
+}
+
+.theme-ocean {
+  --primary: oklch(0.56 0.18 230);
+  --ring: oklch(0.56 0.18 230);
+  --sidebar-primary: oklch(0.56 0.18 230);
+  --sidebar-ring: oklch(0.56 0.18 230);
+}
+.dark.theme-ocean, .dark .theme-ocean {
+  --primary: oklch(0.62 0.18 230);
+  --ring: oklch(0.62 0.18 230);
+  --sidebar-primary: oklch(0.62 0.18 230);
+  --sidebar-ring: oklch(0.62 0.18 230);
+}
+
+.theme-violet {
+  --primary: oklch(0.56 0.26 295);
+  --ring: oklch(0.56 0.26 295);
+  --sidebar-primary: oklch(0.56 0.26 295);
+  --sidebar-ring: oklch(0.56 0.26 295);
+}
+.dark.theme-violet, .dark .theme-violet {
+  --primary: oklch(0.62 0.26 295);
+  --ring: oklch(0.62 0.26 295);
+  --sidebar-primary: oklch(0.62 0.26 295);
+  --sidebar-ring: oklch(0.62 0.26 295);
+}
+
+.theme-sunset {
+  --primary: oklch(0.65 0.20 40);
+  --ring: oklch(0.65 0.20 40);
+  --sidebar-primary: oklch(0.65 0.20 40);
+  --sidebar-ring: oklch(0.65 0.20 40);
+}
+.dark.theme-sunset, .dark .theme-sunset {
+  --primary: oklch(0.70 0.20 40);
+  --ring: oklch(0.70 0.20 40);
+  --sidebar-primary: oklch(0.70 0.20 40);
+  --sidebar-ring: oklch(0.70 0.20 40);
+}
+
+.theme-rose {
+  --primary: oklch(0.60 0.22 5);
+  --ring: oklch(0.60 0.22 5);
+  --sidebar-primary: oklch(0.60 0.22 5);
+  --sidebar-ring: oklch(0.60 0.22 5);
+}
+.dark.theme-rose, .dark .theme-rose {
+  --primary: oklch(0.66 0.22 5);
+  --ring: oklch(0.66 0.22 5);
+  --sidebar-primary: oklch(0.66 0.22 5);
+  --sidebar-ring: oklch(0.66 0.22 5);
+}
+
+.theme-slate {
+  --primary: oklch(0.40 0.05 240);
+  --ring: oklch(0.40 0.05 240);
+  --sidebar-primary: oklch(0.40 0.05 240);
+  --sidebar-ring: oklch(0.40 0.05 240);
+}
+.dark.theme-slate, .dark .theme-slate {
+  --primary: oklch(0.50 0.05 240);
+  --ring: oklch(0.50 0.05 240);
+  --sidebar-primary: oklch(0.50 0.05 240);
+  --sidebar-ring: oklch(0.50 0.05 240);
+}
+
+/* ═══════════════════════════════════════════════════
    BASE TOKENS  — Dark Mode
 ═══════════════════════════════════════════════════ */
 .dark {
@@ -327,4 +409,148 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ═══════════════════════════════════════════════════
+   THEME ACCENT OVERRIDES — beats portal specificity
+   Applied AFTER all portal definitions so these win
+   Targets --primary, --ring, and portal sidebar/logo
+═══════════════════════════════════════════════════ */
+
+/* Shamrock Green */
+html.theme-shamrock .portal-admin,
+html.theme-shamrock .portal-landlord,
+html.theme-shamrock .portal-tenant {
+  --primary: oklch(0.62 0.19 145);
+  --ring: oklch(0.62 0.19 145);
+  --portal-sidebar-active-bg: oklch(0.62 0.19 145);
+  --portal-sidebar-logo-bg: oklch(0.62 0.19 145);
+  --portal-role-badge: oklch(0.62 0.19 145);
+}
+html.dark.theme-shamrock .portal-admin,
+html.dark.theme-shamrock .portal-landlord,
+html.dark.theme-shamrock .portal-tenant,
+.dark html.theme-shamrock .portal-admin,
+.dark html.theme-shamrock .portal-landlord,
+.dark html.theme-shamrock .portal-tenant {
+  --primary: oklch(0.68 0.19 145);
+  --ring: oklch(0.68 0.19 145);
+  --portal-sidebar-active-bg: oklch(0.68 0.19 145);
+  --portal-sidebar-logo-bg: oklch(0.68 0.19 145);
+  --portal-role-badge: oklch(0.68 0.19 145);
+}
+
+/* Ocean Blue */
+html.theme-ocean .portal-admin,
+html.theme-ocean .portal-landlord,
+html.theme-ocean .portal-tenant {
+  --primary: oklch(0.56 0.18 230);
+  --ring: oklch(0.56 0.18 230);
+  --portal-sidebar-active-bg: oklch(0.56 0.18 230);
+  --portal-sidebar-logo-bg: oklch(0.56 0.18 230);
+  --portal-role-badge: oklch(0.56 0.18 230);
+}
+html.dark.theme-ocean .portal-admin,
+html.dark.theme-ocean .portal-landlord,
+html.dark.theme-ocean .portal-tenant,
+.dark html.theme-ocean .portal-admin,
+.dark html.theme-ocean .portal-landlord,
+.dark html.theme-ocean .portal-tenant {
+  --primary: oklch(0.62 0.18 230);
+  --ring: oklch(0.62 0.18 230);
+  --portal-sidebar-active-bg: oklch(0.62 0.18 230);
+  --portal-sidebar-logo-bg: oklch(0.62 0.18 230);
+  --portal-role-badge: oklch(0.62 0.18 230);
+}
+
+/* Royal Violet */
+html.theme-violet .portal-admin,
+html.theme-violet .portal-landlord,
+html.theme-violet .portal-tenant {
+  --primary: oklch(0.56 0.26 295);
+  --ring: oklch(0.56 0.26 295);
+  --portal-sidebar-active-bg: oklch(0.56 0.26 295);
+  --portal-sidebar-logo-bg: oklch(0.56 0.26 295);
+  --portal-role-badge: oklch(0.56 0.26 295);
+}
+html.dark.theme-violet .portal-admin,
+html.dark.theme-violet .portal-landlord,
+html.dark.theme-violet .portal-tenant,
+.dark html.theme-violet .portal-admin,
+.dark html.theme-violet .portal-landlord,
+.dark html.theme-violet .portal-tenant {
+  --primary: oklch(0.62 0.26 295);
+  --ring: oklch(0.62 0.26 295);
+  --portal-sidebar-active-bg: oklch(0.62 0.26 295);
+  --portal-sidebar-logo-bg: oklch(0.62 0.26 295);
+  --portal-role-badge: oklch(0.62 0.26 295);
+}
+
+/* Sunset Orange */
+html.theme-sunset .portal-admin,
+html.theme-sunset .portal-landlord,
+html.theme-sunset .portal-tenant {
+  --primary: oklch(0.65 0.20 40);
+  --ring: oklch(0.65 0.20 40);
+  --portal-sidebar-active-bg: oklch(0.65 0.20 40);
+  --portal-sidebar-logo-bg: oklch(0.65 0.20 40);
+  --portal-role-badge: oklch(0.65 0.20 40);
+}
+html.dark.theme-sunset .portal-admin,
+html.dark.theme-sunset .portal-landlord,
+html.dark.theme-sunset .portal-tenant,
+.dark html.theme-sunset .portal-admin,
+.dark html.theme-sunset .portal-landlord,
+.dark html.theme-sunset .portal-tenant {
+  --primary: oklch(0.70 0.20 40);
+  --ring: oklch(0.70 0.20 40);
+  --portal-sidebar-active-bg: oklch(0.70 0.20 40);
+  --portal-sidebar-logo-bg: oklch(0.70 0.20 40);
+  --portal-role-badge: oklch(0.70 0.20 40);
+}
+
+/* Blossom Rose */
+html.theme-rose .portal-admin,
+html.theme-rose .portal-landlord,
+html.theme-rose .portal-tenant {
+  --primary: oklch(0.60 0.22 5);
+  --ring: oklch(0.60 0.22 5);
+  --portal-sidebar-active-bg: oklch(0.60 0.22 5);
+  --portal-sidebar-logo-bg: oklch(0.60 0.22 5);
+  --portal-role-badge: oklch(0.60 0.22 5);
+}
+html.dark.theme-rose .portal-admin,
+html.dark.theme-rose .portal-landlord,
+html.dark.theme-rose .portal-tenant,
+.dark html.theme-rose .portal-admin,
+.dark html.theme-rose .portal-landlord,
+.dark html.theme-rose .portal-tenant {
+  --primary: oklch(0.66 0.22 5);
+  --ring: oklch(0.66 0.22 5);
+  --portal-sidebar-active-bg: oklch(0.66 0.22 5);
+  --portal-sidebar-logo-bg: oklch(0.66 0.22 5);
+  --portal-role-badge: oklch(0.66 0.22 5);
+}
+
+/* Modern Slate */
+html.theme-slate .portal-admin,
+html.theme-slate .portal-landlord,
+html.theme-slate .portal-tenant {
+  --primary: oklch(0.40 0.05 240);
+  --ring: oklch(0.40 0.05 240);
+  --portal-sidebar-active-bg: oklch(0.40 0.05 240);
+  --portal-sidebar-logo-bg: oklch(0.40 0.05 240);
+  --portal-role-badge: oklch(0.40 0.05 240);
+}
+html.dark.theme-slate .portal-admin,
+html.dark.theme-slate .portal-landlord,
+html.dark.theme-slate .portal-tenant,
+.dark html.theme-slate .portal-admin,
+.dark html.theme-slate .portal-landlord,
+.dark html.theme-slate .portal-tenant {
+  --primary: oklch(0.50 0.05 240);
+  --ring: oklch(0.50 0.05 240);
+  --portal-sidebar-active-bg: oklch(0.50 0.05 240);
+  --portal-sidebar-logo-bg: oklch(0.50 0.05 240);
+  --portal-role-badge: oklch(0.50 0.05 240);
 }

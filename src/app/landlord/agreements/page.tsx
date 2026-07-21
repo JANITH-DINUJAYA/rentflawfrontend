@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { FileSignature, AlertTriangle, CheckCircle2, Clock, Loader2, AlertCircle, LogOut, Plus, RefreshCw } from "lucide-react";
+import { FileSignature, AlertTriangle, CheckCircle2, Clock, Loader2, AlertCircle, LogOut, Plus, RefreshCw, Printer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -70,6 +70,105 @@ export default function LandlordAgreementsPage() {
   };
 
   useEffect(() => { fetchAgreements(); }, []);
+
+  const handlePrintAgreement = (agr: Agreement) => {
+    const statusLabel = statusConfig[agr.status]?.label || agr.status;
+    const invoiceRows = agr.invoices?.length
+      ? agr.invoices
+          .map(
+            (inv) =>
+              `<tr>
+                <td>${new Date(inv.due_date).toLocaleDateString()}</td>
+                <td>$${Number(inv.total_due).toFixed(2)}</td>
+                <td style="text-transform:uppercase;font-weight:700;color:${inv.status === 'PAID' ? '#059669' : inv.status === 'OVERDUE' ? '#dc2626' : '#6b7280'}">${inv.status}</td>
+              </tr>`
+          )
+          .join("")
+      : `<tr><td colspan="3" style="text-align:center;color:#9ca3af">No invoices generated yet</td></tr>`;
+
+    const html = `
+      <html>
+        <head>
+          <title>Rental Agreement — ${agr.tenant.first_name} ${agr.tenant.last_name}</title>
+          <style>
+            *{box-sizing:border-box;margin:0;padding:0}
+            body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:40px;background:#fff}
+            .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #e5e7eb}
+            .brand{font-size:22px;font-weight:900;color:#4f46e5;letter-spacing:-0.5px}
+            .brand span{color:#6b7280;font-weight:400;font-size:13px;display:block;margin-top:2px}
+            .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+              background:${
+                agr.status === 'ACTIVE' ? '#d1fae5' :
+                agr.status === 'TERMINATED' ? '#fee2e2' :
+                agr.status === 'TERMINATION_REQUESTED' ? '#fef3c7' :
+                '#f3f4f6'
+              };
+              color:${
+                agr.status === 'ACTIVE' ? '#059669' :
+                agr.status === 'TERMINATED' ? '#dc2626' :
+                agr.status === 'TERMINATION_REQUESTED' ? '#d97706' :
+                '#6b7280'
+              }}
+            h2{font-size:15px;font-weight:700;color:#4f46e5;margin:20px 0 12px;border-bottom:1px solid #e5e7eb;padding-bottom:6px}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:8px}
+            .field label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+            .field p{font-size:13px;color:#111827;font-weight:600;margin-top:2px}
+            table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+            th{background:#f9fafb;color:#6b7280;font-weight:700;font-size:10px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:left}
+            td{padding:8px 10px;border-bottom:1px solid #f3f4f6}
+            .footer{margin-top:36px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af}
+            @media print{body{padding:20px}.no-print{display:none}}
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="brand">RentFlaw<span>Rental Agreement Document</span></div>
+            </div>
+            <div><span class="badge">${statusLabel}</span><br/><span style="font-size:11px;color:#9ca3af;margin-top:4px;display:block">Printed: ${new Date().toLocaleDateString()}</span></div>
+          </div>
+
+          <h2>Tenant Information</h2>
+          <div class="grid">
+            <div class="field"><label>Full Name</label><p>${agr.tenant.first_name} ${agr.tenant.last_name}</p></div>
+            <div class="field"><label>Email</label><p>${agr.tenant.email}</p></div>
+            <div class="field"><label>Tenant Code</label><p>${agr.tenant.tenant_code || '—'}</p></div>
+          </div>
+
+          <h2>Property & Room</h2>
+          <div class="grid">
+            <div class="field"><label>Property</label><p>${agr.property.name}</p></div>
+            <div class="field"><label>Type</label><p>${agr.property.type || '—'}</p></div>
+            <div class="field"><label>Room Number</label><p>${agr.room.room_number}</p></div>
+            <div class="field"><label>Base Rent</label><p>$${Number(agr.room.base_rent).toFixed(2)}</p></div>
+          </div>
+
+          <h2>Agreement Terms</h2>
+          <div class="grid">
+            <div class="field"><label>Monthly Rent</label><p>$${Number(agr.rent_amount).toFixed(2)}</p></div>
+            <div class="field"><label>Security Deposit</label><p>$${Number(agr.security_deposit).toFixed(2)}</p></div>
+            <div class="field"><label>Rent Collection Day</label><p>${agr.collection_day}${agr.collection_day === 1 ? 'st' : agr.collection_day === 2 ? 'nd' : agr.collection_day === 3 ? 'rd' : 'th'} of each month</p></div>
+            <div class="field"><label>Leaving Option</label><p>${agr.leaving_option?.replace(/_/g, ' ') || '—'}</p></div>
+            <div class="field"><label>Start Date</label><p>${new Date(agr.start_date).toLocaleDateString()}</p></div>
+            <div class="field"><label>End Date</label><p>${new Date(agr.end_date).toLocaleDateString()}</p></div>
+          </div>
+
+          <h2>Invoice History (${agr.invoices?.length || 0} invoice${agr.invoices?.length === 1 ? '' : 's'})</h2>
+          <table>
+            <thead><tr><th>Due Date</th><th>Amount Due</th><th>Status</th></tr></thead>
+            <tbody>${invoiceRows}</tbody>
+          </table>
+
+          <div class="footer">RentFlaw &mdash; Global Rental Management SaaS &nbsp;&bull;&nbsp; This document is computer generated</div>
+          <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script>
+        </body>
+      </html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Popup blocked — please allow popups for this site."); return; }
+    w.document.write(html);
+    w.document.close();
+  };
 
   const handleOpenTerminateDialog = async (agreement: Agreement) => {
     setTerminateTarget(agreement);
@@ -328,6 +427,13 @@ export default function LandlordAgreementsPage() {
                               {agr.status === "TERMINATION_REQUESTED" ? "✓ Accept Leave" : "Terminate"}
                             </button>
                           )}
+                          <button
+                            onClick={() => handlePrintAgreement(agr)}
+                            title="Print Agreement"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </button>
                         </div>
                       </TableCell>
                     </TableRow>

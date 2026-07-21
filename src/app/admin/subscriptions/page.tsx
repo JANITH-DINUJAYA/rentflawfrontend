@@ -36,6 +36,11 @@ export default function AdminSubscriptionsPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
+  // Edit package states
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState(emptyForm);
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
+
   // Custom request approval modal state
   const [approveCustomTarget, setApproveCustomTarget] = useState<any | null>(null);
   const [customPrice, setCustomPrice] = useState("");
@@ -83,6 +88,45 @@ export default function AdminSubscriptionsPage() {
     } catch (err: any) {
       const msg = err?.response?.data?.message;
       setFormError(Array.isArray(msg) ? msg[0] : msg || "Failed to create package.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenEdit = (pkg: Package) => {
+    setEditingPackageId(pkg.id);
+    setEditForm({
+      name: pkg.name,
+      price: String(pkg.price),
+      max_properties: String(pkg.max_properties),
+      max_tenants: String(pkg.max_tenants),
+      max_staff: String(pkg.max_staff),
+    });
+    setFormError("");
+    setShowEdit(true);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    if (!editForm.name.trim() || !editForm.price || !editForm.max_properties || !editForm.max_tenants || !editForm.max_staff) {
+      setFormError("All fields are required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.patch(`/subscriptions/packages/${editingPackageId}`, {
+        name: editForm.name.trim(),
+        price: parseFloat(editForm.price),
+        max_properties: parseInt(editForm.max_properties),
+        max_tenants: parseInt(editForm.max_tenants),
+        max_staff: parseInt(editForm.max_staff),
+      });
+      setShowEdit(false);
+      await fetchAllData();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setFormError(Array.isArray(msg) ? msg[0] : msg || "Failed to update package.");
     } finally {
       setSaving(false);
     }
@@ -225,6 +269,13 @@ export default function AdminSubscriptionsPage() {
                     <Badge variant={pkg.is_active ? "default" : "secondary"} className="text-[10px]">
                       {pkg.is_active ? "Active" : "Inactive"}
                     </Badge>
+                    <button
+                      onClick={() => handleOpenEdit(pkg)}
+                      title="Edit package"
+                      className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => handleDeletePackage(pkg.id, pkg.name)}
                       title="Delete package"
@@ -442,6 +493,51 @@ export default function AdminSubscriptionsPage() {
               <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer">Cancel</button>
               <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Create Package
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Package Dialog */}
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Edit Subscription Package</DialogTitle>
+            <DialogDescription>Modify limits and price details for this SaaS tier.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4 pt-2">
+            {formError && (
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4" /> {formError}
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-pkg-name">Package Name</Label>
+              <Input id="edit-pkg-name" placeholder="e.g. Starter, Pro, Enterprise" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-pkg-price">Monthly Price ($)</Label>
+                <Input id="edit-pkg-price" type="number" min="0" step="0.01" placeholder="0" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-pkg-props">Max Properties</Label>
+                <Input id="edit-pkg-props" type="number" min="1" placeholder="5" value={editForm.max_properties} onChange={e => setEditForm({ ...editForm, max_properties: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-pkg-tenants">Max Tenants</Label>
+                <Input id="edit-pkg-tenants" type="number" min="1" placeholder="100" value={editForm.max_tenants} onChange={e => setEditForm({ ...editForm, max_tenants: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-pkg-staff">Max Staff</Label>
+                <Input id="edit-pkg-staff" type="number" min="0" placeholder="5" value={editForm.max_staff} onChange={e => setEditForm({ ...editForm, max_staff: e.target.value })} />
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <button type="button" onClick={() => setShowEdit(false)} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer">Cancel</button>
+              <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Update Package
               </button>
             </DialogFooter>
           </form>

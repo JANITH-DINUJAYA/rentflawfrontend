@@ -465,6 +465,7 @@ export default function ProfilePage() {
 
 function ThemeSwitcherCard() {
   const { colorTheme, setColorTheme } = useTheme();
+  const [success, setSuccess] = React.useState(false);
 
   const themes: { id: ColorTheme; label: string; bg: string; border: string }[] = [
     { id: "shamrock", label: "Shamrock Green", bg: "bg-emerald-500", border: "border-emerald-500/20" },
@@ -475,6 +476,13 @@ function ThemeSwitcherCard() {
     { id: "slate", label: "Modern Slate", bg: "bg-slate-500", border: "border-slate-500/20" },
   ];
 
+  const handleSelect = (id: ColorTheme) => {
+    setColorTheme(id);
+    setSuccess(true);
+    const timer = setTimeout(() => setSuccess(false), 2000);
+    return () => clearTimeout(timer);
+  };
+
   return (
     <Card className="shadow-md">
       <CardHeader>
@@ -484,13 +492,18 @@ function ThemeSwitcherCard() {
         <CardDescription>Select your preferred primary theme color for the workspace dashboard.</CardDescription>
       </CardHeader>
       <CardContent>
+        {success && (
+          <div className="mb-4 flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20 transition-all">
+            <Check className="h-4 w-4" /> Accent color saved and applied successfully!
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {themes.map((t) => {
             const isActive = colorTheme === t.id;
             return (
               <button
                 key={t.id}
-                onClick={() => setColorTheme(t.id)}
+                onClick={() => handleSelect(t.id)}
                 className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
                   isActive
                     ? "border-primary bg-primary/5 ring-1 ring-primary/20"

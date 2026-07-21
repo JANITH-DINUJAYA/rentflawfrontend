@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Search, Loader2, AlertCircle, Plus, Edit2, Trash2 } from "lucide-react";
+import { Search, Loader2, AlertCircle, Plus, Edit2, Trash2, Square, CheckSquare } from "lucide-react";
 import { api } from "@/lib/api";
 import { TableExportControls } from "@/components/table-export-controls";
 
@@ -46,6 +46,38 @@ export default function AdminTenantsPage() {
 
   const [formPending, setFormPending] = useState(false);
   const [formError, setFormError] = useState("");
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Are you sure you want to de-activate the ${selectedIds.length} selected tenants?`)) return;
+    setBulkDeleting(true);
+    try {
+      await api.post("/tenants/bulk-delete", { ids: selectedIds });
+      setSelectedIds([]);
+      await fetchTenants();
+    } catch {
+      alert("Failed to bulk de-activate tenants.");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleToggleSelectAll = (filteredData: Tenant[]) => {
+    const filteredIds = filteredData.map(t => t.id);
+    const allSelected = filteredIds.every(id => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      setSelectedIds(prev => [...Array.from(new Set([...prev, ...filteredIds]))]);
+    }
+  };
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -158,12 +190,24 @@ export default function AdminTenantsPage() {
           <h2 className="text-2xl font-bold tracking-tight">Tenant Accounts</h2>
           <p className="text-sm text-muted-foreground">All registered tenants across the platform.</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer whitespace-nowrap"
-        >
-          <Plus className="mr-1.5 h-4 w-4" /> Create Tenant
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-destructive text-destructive-foreground hover:opacity-90 shadow-md shadow-destructive/10 transition-all cursor-pointer whitespace-nowrap disabled:opacity-60"
+            >
+              {bulkDeleting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}
+              Deactivate Selected ({selectedIds.length})
+            </button>
+          )}
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Create Tenant
+          </button>
+        </div>
       </div>
 
       {/* Table Export Controls */}
@@ -211,6 +255,18 @@ export default function AdminTenantsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12 text-center">
+                    <button
+                      onClick={() => handleToggleSelectAll(filtered)}
+                      className="p-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                      {filtered.length > 0 && filtered.every(t => selectedIds.includes(t.id)) ? (
+                        <CheckSquare className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </button>
+                  </TableHead>
                   <TableHead>Tenant</TableHead>
                   <TableHead>Share Code</TableHead>
                   <TableHead>Email</TableHead>
@@ -224,15 +280,24 @@ export default function AdminTenantsPage() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       {search ? `No tenants matching "${search}"` : "No tenants registered yet."}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filtered.map(t => {
                     const hasActive = t.rental_agreements?.some(a => a.status === "ACTIVE");
+                    const isSelected = selectedIds.includes(t.id);
                     return (
-                      <TableRow key={t.id} className="hover:bg-accent/20 transition-colors">
+                      <TableRow key={t.id} className={`hover:bg-accent/20 transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
+                        <TableCell className="text-center">
+                          <button
+                            onClick={() => handleToggleSelect(t.id)}
+                            className="p-1 text-muted-foreground hover:text-primary cursor-pointer"
+                          >
+                            {isSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
+                          </button>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
