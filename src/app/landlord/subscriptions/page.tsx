@@ -24,6 +24,7 @@ interface MySubscription {
   start_date: string;
   end_date: string;
   package: Package;
+  max_paid_price?: number;
 }
 
 export default function LandlordSubscriptionsPage() {
@@ -90,12 +91,19 @@ export default function LandlordSubscriptionsPage() {
   };
 
   const handleSelectPlan = async (pkg: Package) => {
-    if (Number(pkg.price) === 0) {
-      if (confirm(`Are you sure you want to select the ${pkg.name} (Free Plan)? Your subscription limits will adjust immediately.`)) {
+    const maxPaidPrice = Number(mySubscription?.max_paid_price || 0);
+    const isCheaperOrEqualPaid = maxPaidPrice > 0 && Number(pkg.price) <= maxPaidPrice;
+
+    if (Number(pkg.price) === 0 || isCheaperOrEqualPaid) {
+      const confirmMsg = isCheaperOrEqualPaid
+        ? `Are you sure you want to switch to ${pkg.name}? Since you already paid for a higher tier or this tier within this billing cycle, you can switch back and forth instantly at no extra cost.`
+        : `Are you sure you want to select the ${pkg.name} (Free Plan)? Your subscription limits will adjust immediately.`;
+
+      if (confirm(confirmMsg)) {
         setUpgrading(true);
         try {
           await api.post("/subscriptions/upgrade", { packageId: pkg.id });
-          alert(`Successfully subscribed to ${pkg.name}!`);
+          alert(`Successfully switched to ${pkg.name}!`);
           await fetchData();
         } catch (err: any) {
           alert(err?.response?.data?.message || "Failed to subscribe to package.");
@@ -285,6 +293,8 @@ export default function LandlordSubscriptionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {packages.map((pkg, i) => {
                 const isCurrentPlan = mySubscription?.package.id === pkg.id;
+                const maxPaidPrice = Number(mySubscription?.max_paid_price || 0);
+                const isCheaperOrEqualPaid = maxPaidPrice > 0 && Number(pkg.price) <= maxPaidPrice;
                 return (
                   <Card key={pkg.id} className={`relative overflow-hidden transition-all ${isCurrentPlan ? "border-primary ring-1 ring-primary/30" : "hover:shadow-lg"}`}>
                     <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
@@ -298,10 +308,15 @@ export default function LandlordSubscriptionsPage() {
                         )}
                       </div>
                       <CardTitle className="text-lg font-extrabold mt-3">{pkg.name}</CardTitle>
-                      <p className="text-2xl font-black">
-                        {pkg.price === 0 ? "Free" : `Rs ${pkg.price}`}
-                        {pkg.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-2xl font-black">
+                          {pkg.price === 0 ? "Free" : `Rs ${pkg.price}`}
+                          {pkg.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                        </p>
+                        {isCheaperOrEqualPaid && !isCurrentPlan && (
+                          <Badge className="bg-green-600/10 text-green-600 border-none text-[10px] w-fit font-bold">Included in Cycle</Badge>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <ul className="space-y-1.5">
@@ -324,7 +339,7 @@ export default function LandlordSubscriptionsPage() {
                           onClick={() => handleSelectPlan(pkg)}
                           className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
                         >
-                          Select Plan <ArrowRight className="h-3.5 w-3.5" />
+                          {isCheaperOrEqualPaid ? "Switch to Plan" : "Select Plan"} <ArrowRight className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </CardContent>
