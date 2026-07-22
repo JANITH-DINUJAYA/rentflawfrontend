@@ -66,7 +66,7 @@ export default function AdminDashboard() {
     {
       label: "Active Subscriptions",
       value: loading ? "—" : String(activeSubsCount),
-      sub: loading ? "" : `Est. MRR: $${mrrEstimate}`,
+      sub: loading ? "" : `Est. MRR: Rs ${mrrEstimate}`,
       icon: Crown,
       color: "text-amber-400 bg-amber-500/15",
       href: "/admin/subscriptions",

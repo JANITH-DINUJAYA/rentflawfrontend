@@ -46,8 +46,8 @@ export default function InvoicesPage() {
       : "Unknown Tenant";
     const propertyName = inv.agreement?.property?.name || "—";
     const roomNumber = inv.agreement?.room?.room_number || "—";
-    const discount = Number(inv.discount) > 0 ? `-$${Number(inv.discount).toFixed(2)}` : "—";
-    const lateFee = Number(inv.late_fee_applied) > 0 ? `+$${Number(inv.late_fee_applied).toFixed(2)}` : "—";
+    const discount = Number(inv.discount) > 0 ? `-Rs ${Number(inv.discount).toFixed(2)}` : "—";
+    const lateFee = Number(inv.late_fee_applied) > 0 ? `+Rs ${Number(inv.late_fee_applied).toFixed(2)}` : "—";
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
@@ -134,7 +134,7 @@ export default function InvoicesPage() {
                     <div style="font-size: 11px; color: #6b7280; margin-top: 3px;">Category: ${inv.type}</div>
                     ${inv.utility_bill ? `<div style="font-size: 11px; color: #6b7280; margin-top: 2px;">Utility Details: ${inv.utility_bill.type} (${inv.utility_bill.meter_reading_previous} &rarr; ${inv.utility_bill.meter_reading_current})</div>` : ""}
                   </td>
-                  <td style="text-align: right; font-weight: 700;">$${Number(inv.amount).toFixed(2)}</td>
+                  <td style="text-align: right; font-weight: 700;">Rs ${Number(inv.amount).toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>
@@ -143,7 +143,7 @@ export default function InvoicesPage() {
               <table class="total-table">
                 <tr>
                   <td style="color: #6b7280;">Subtotal:</td>
-                  <td style="font-weight: 700;">$${Number(inv.amount).toFixed(2)}</td>
+                  <td style="font-weight: 700;">Rs ${Number(inv.amount).toFixed(2)}</td>
                 </tr>
                 <tr>
                   <td style="color: #6b7280;">Discount:</td>
@@ -155,7 +155,7 @@ export default function InvoicesPage() {
                 </tr>
                 <tr class="grand-total">
                   <td>Total Due:</td>
-                  <td>$${Number(inv.total_due).toFixed(2)}</td>
+                  <td>Rs ${Number(inv.total_due).toFixed(2)}</td>
                 </tr>
               </table>
             </div>
@@ -296,7 +296,7 @@ export default function InvoicesPage() {
             tenant: inv.agreement?.tenant ? `${inv.agreement.tenant.first_name} ${inv.agreement.tenant.last_name}` : "N/A",
             property: inv.agreement?.property?.name || "N/A",
             type: inv.type,
-            amount: `$${Number(inv.total_due).toFixed(2)}`,
+            amount: `Rs ${Number(inv.total_due).toFixed(2)}`,
             due_date: new Date(inv.due_date).toLocaleDateString(),
             status: inv.status,
           }))}
@@ -356,7 +356,7 @@ export default function InvoicesPage() {
                         {inv.utility_bill && (
                           <p className="text-[10px] text-muted-foreground mt-0.5">
                             {inv.utility_bill.type} 
-                            {inv.utility_bill.meter_reading_current !== null && ` (${inv.utility_bill.meter_reading_previous} → ${inv.utility_bill.meter_reading_current} @ $${inv.utility_bill.rate_per_unit})`}
+                            {inv.utility_bill.meter_reading_current !== null && ` (${inv.utility_bill.meter_reading_previous} → ${inv.utility_bill.meter_reading_current} @ Rs ${inv.utility_bill.rate_per_unit})`}
                           </p>
                         )}
                       </TableCell>

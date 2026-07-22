@@ -208,7 +208,7 @@ export default function TenantInvoicesPage() {
                         {inv.utility_bill && (
                           <p className="text-[10px] text-muted-foreground mt-0.5">
                             {inv.utility_bill.type} 
-                            {inv.utility_bill.meter_reading_current !== null && ` (${inv.utility_bill.meter_reading_previous} → ${inv.utility_bill.meter_reading_current} @ $${inv.utility_bill.rate_per_unit})`}
+                            {inv.utility_bill.meter_reading_current !== null && ` (${inv.utility_bill.meter_reading_previous} → ${inv.utility_bill.meter_reading_current} @ Rs ${inv.utility_bill.rate_per_unit})`}
                           </p>
                         )}
                       </TableCell>

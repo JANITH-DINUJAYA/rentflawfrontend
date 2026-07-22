@@ -263,7 +263,7 @@ export default function LandlordSubscriptionsPage() {
                       </div>
                       <CardTitle className="text-lg font-extrabold mt-3">{pkg.name}</CardTitle>
                       <p className="text-2xl font-black">
-                        {pkg.price === 0 ? "Free" : `$${pkg.price}`}
+                        {pkg.price === 0 ? "Free" : `Rs ${pkg.price}`}
                         {pkg.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
                       </p>
                     </CardHeader>

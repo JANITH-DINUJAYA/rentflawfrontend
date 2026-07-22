@@ -175,7 +175,7 @@ export default function AdminReportsPage() {
 
   /* Export handlers */
   const printIncome = () => {
-    const html = buildTableHTML(["Month", "Income"], incomeMonths.map(d => [d.month, `$${d.income.toLocaleString()}`]) as any);
+    const html = buildTableHTML(["Month", "Income"], incomeMonths.map(d => [d.month, `Rs ${d.income.toLocaleString()}`]) as any);
     printSection("Platform Income Trend (Last 6 Months)", html);
   };
   const csvIncome = () => exportCSV(incomeMonths.map(d => ({ Month: d.month, Income: d.income })), "platform_income_report");
@@ -186,7 +186,7 @@ export default function AdminReportsPage() {
       overdueList.map((inv: any) => {
         const name = inv.agreement?.tenant ? `${inv.agreement.tenant.first_name} ${inv.agreement.tenant.last_name}` : "—";
         const days = Math.floor((Date.now() - new Date(inv.due_date).getTime()) / 86400000);
-        return [name, inv.agreement?.property?.name || "—", `${days} days`, `$${Number(inv.total_due).toFixed(2)}`];
+        return [name, inv.agreement?.property?.name || "—", `${days} days`, `Rs ${Number(inv.total_due).toFixed(2)}`];
       }) as any
     );
     printSection("Platform Overdue Invoices Report", html);
@@ -205,7 +205,7 @@ export default function AdminReportsPage() {
   const printTenants = () => {
     const html = buildTableHTML(
       ["Tenant", "Email", "Property", "Room", "Monthly Rent"],
-      tenants.map(t => [t.tenantName, t.email, t.propertyName, t.roomNumber, `$${Number(t.rentAmount).toFixed(0)}`]) as any
+      tenants.map(t => [t.tenantName, t.email, t.propertyName, t.roomNumber, `Rs ${Number(t.rentAmount).toFixed(0)}`]) as any
     );
     printSection("Platform Active Tenants Report", html);
   };
@@ -236,9 +236,9 @@ export default function AdminReportsPage() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Platform 6M Income", value: `$${totalIncome.toLocaleString()}`, icon: DollarSign, color: "text-emerald-500 bg-emerald-500/10" },
+          { label: "Platform 6M Income", value: `Rs ${totalIncome.toLocaleString()}`, icon: DollarSign, color: "text-emerald-500 bg-emerald-500/10" },
           { label: "Active Tenants", value: String(tenants.length), icon: Users, color: "text-sky-500 bg-sky-500/10" },
-          { label: "Overdue Balance", value: `$${Number(totalOverdue).toLocaleString()}`, icon: AlertCircle, color: "text-destructive bg-destructive/10" },
+          { label: "Overdue Balance", value: `Rs ${Number(totalOverdue).toLocaleString()}`, icon: AlertCircle, color: "text-destructive bg-destructive/10" },
           { label: "Overall Occupancy", value: `${Math.round(occupancyPct)}%`, icon: Building2, color: "text-violet-500 bg-violet-500/10" },
         ].map(kpi => {
           const Icon = kpi.icon;

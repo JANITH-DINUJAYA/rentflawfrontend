@@ -189,7 +189,7 @@ export default function RoomsPage() {
     property_name: r.floor?.property?.name || "",
     occupancy_type: r.occupancy_type,
     capacity: r.capacity.toString(),
-    base_rent: `$${Number(r.base_rent).toFixed(2)}`,
+    base_rent: `Rs ${Number(r.base_rent).toFixed(2)}`,
   }));
 
   const handleOpenAdd = () => {

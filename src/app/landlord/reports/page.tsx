@@ -205,7 +205,7 @@ export default function ReportsPage() {
   const handlePrintIncome = () => {
     const html = buildTableHTML(
       ["Month", "Income"],
-      incomeMonths.map(d => [d.month, `$${d.income.toLocaleString()}`])
+      incomeMonths.map(d => [d.month, `Rs ${d.income.toLocaleString()}`])
     );
     printSection("Monthly Income Trend", html);
   };
@@ -221,7 +221,7 @@ export default function ReportsPage() {
       overdueList.map((inv: any) => {
         const name = inv.agreement?.tenant ? `${inv.agreement.tenant.first_name} ${inv.agreement.tenant.last_name}` : "—";
         const days = Math.floor((Date.now() - new Date(inv.due_date).getTime()) / 86400000);
-        return [name, inv.agreement?.property?.name || "—", `${days} days`, `$${Number(inv.total_due).toFixed(2)}`];
+        return [name, inv.agreement?.property?.name || "—", `${days} days`, `Rs ${Number(inv.total_due).toFixed(2)}`];
       })
     );
     printSection("Overdue Invoices Report", html);
@@ -241,7 +241,7 @@ export default function ReportsPage() {
   const handlePrintTenants = () => {
     const html = buildTableHTML(
       ["Tenant", "Email", "Property", "Room", "Monthly Rent"],
-      tenants.map(t => [t.tenantName, t.email, t.propertyName, t.roomNumber, `$${Number(t.rentAmount).toFixed(0)}`])
+      tenants.map(t => [t.tenantName, t.email, t.propertyName, t.roomNumber, `Rs ${Number(t.rentAmount).toFixed(0)}`])
     );
     printSection("Active Tenants Report", html);
   };
@@ -305,9 +305,9 @@ export default function ReportsPage() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "6-Month Income", value: `$${totalIncome.toLocaleString()}`, icon: DollarSign, color: "text-emerald-500 bg-emerald-500/10" },
+          { label: "6-Month Income", value: `Rs ${totalIncome.toLocaleString()}`, icon: DollarSign, color: "text-emerald-500 bg-emerald-500/10" },
           { label: "Active Tenants", value: String(totalTenants), icon: Users, color: "text-sky-500 bg-sky-500/10" },
-          { label: "Overdue Balance", value: `$${Number(totalOverdue).toLocaleString()}`, icon: AlertCircle, color: "text-destructive bg-destructive/10" },
+          { label: "Overdue Balance", value: `Rs ${Number(totalOverdue).toLocaleString()}`, icon: AlertCircle, color: "text-destructive bg-destructive/10" },
           { label: "Overall Occupancy", value: `${Math.round(occupancyPct)}%`, icon: Building2, color: "text-violet-500 bg-violet-500/10" }
         ].map(kpi => {
           const Icon = kpi.icon;

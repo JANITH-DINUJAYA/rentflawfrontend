@@ -135,7 +135,7 @@ export default function PaymentsPage() {
           tableData={filtered.map(p => ({
             tenant: p.tenant ? `${p.tenant.first_name} ${p.tenant.last_name}` : "N/A",
             invoice_id: p.invoice_id || "N/A",
-            amount: `$${Number(p.amount_paid).toFixed(2)}`,
+            amount: `Rs ${Number(p.amount_paid).toFixed(2)}`,
             method: p.payment_method || "SLIP_UPLOAD",
             date: new Date(p.submitted_at).toLocaleDateString(),
             status: p.status,

@@ -345,9 +345,9 @@ function AgreementCard({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: "Room", value: `Room ${agreement.room?.room_number || "Pending"}`, icon: Home },
-            { label: "Monthly Rent", value: `$${Number(agreement.rent_amount).toFixed(2)}`, icon: DollarSign },
+            { label: "Monthly Rent", value: `Rs ${Number(agreement.rent_amount).toFixed(2)}`, icon: DollarSign },
             { label: "Collection Day", value: `${agreement.collection_day}th of Month`, icon: Calendar },
-            { label: "Security Deposit", value: `$${Number(agreement.security_deposit).toFixed(2)}`, icon: DollarSign },
+            { label: "Security Deposit", value: `Rs ${Number(agreement.security_deposit).toFixed(2)}`, icon: DollarSign },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="space-y-1">
               <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">

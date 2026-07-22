@@ -287,7 +287,7 @@ export default function AdminSubscriptionsPage() {
                 </div>
                 <CardTitle className="text-xl font-extrabold mt-3">{pkg.name}</CardTitle>
                 <p className="text-3xl font-black mt-1">
-                  {pkg.price === 0 ? "Free" : `$${pkg.price}`}
+                  {pkg.price === 0 ? "Free" : `Rs ${pkg.price}`}
                   {pkg.price > 0 && <span className="text-sm font-normal text-muted-foreground">/month</span>}
                 </p>
               </CardHeader>

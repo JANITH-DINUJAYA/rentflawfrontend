@@ -289,7 +289,7 @@ export default function UtilitiesPage() {
                 <Select value={form.invoice_id} onValueChange={v => v && setForm({ ...form, invoice_id: v })}>
                   <SelectTrigger>
                     {form.invoice_id
-                      ? <span className="flex flex-1 text-left truncate">{(() => { const inv = invoices.find(i => i.id === form.invoice_id); if (!inv) return form.invoice_id; const tenant = inv.agreement?.tenant; const name = tenant ? `${tenant.first_name} ${tenant.last_name}` : "Unknown"; const due = new Date(inv.due_date).toLocaleDateString(); return `${name} — $${Number(inv.total_due).toFixed(2)} (Due: ${due})`; })()}</span>
+                      ? <span className="flex flex-1 text-left truncate">{(() => { const inv = invoices.find(i => i.id === form.invoice_id); if (!inv) return form.invoice_id; const tenant = inv.agreement?.tenant; const name = tenant ? `${tenant.first_name} ${tenant.last_name}` : "Unknown"; const due = new Date(inv.due_date).toLocaleDateString(); return `${name} — Rs ${Number(inv.total_due).toFixed(2)} (Due: ${due})`; })()}</span>
                       : <SelectValue placeholder="Choose pending invoice" />}
                   </SelectTrigger>
                   <SelectContent>
@@ -300,7 +300,7 @@ export default function UtilitiesPage() {
                       const name = tenant ? `${tenant.first_name} ${tenant.last_name}` : "Unknown";
                       const due = new Date(inv.due_date).toLocaleDateString();
                       return (
-                        <SelectItem key={inv.id} value={inv.id}>{`${name} — $${Number(inv.total_due).toFixed(2)} (Due: ${due})`}</SelectItem>
+                        <SelectItem key={inv.id} value={inv.id}>{`${name} — Rs ${Number(inv.total_due).toFixed(2)} (Due: ${due})`}</SelectItem>
                       );
                     })}
                   </SelectContent>

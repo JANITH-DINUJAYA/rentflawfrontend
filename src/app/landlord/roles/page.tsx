@@ -121,6 +121,22 @@ const PERMISSION_GROUPS = [
       { action: "refunds:update", label: "Process Payout",  desc: "Issue refunds and settle payouts" },
     ],
   },
+  {
+    group: "Staff Members",
+    permissions: [
+      { action: "staff:read",   label: "View Staff",     desc: "Browse staff profiles" },
+      { action: "staff:create", label: "Add Staff",      desc: "Invite new staff members" },
+      { action: "staff:delete", label: "Remove Staff",   desc: "Delete staff profiles" },
+    ],
+  },
+  {
+    group: "Custom Roles",
+    permissions: [
+      { action: "roles:read",   label: "View Roles",     desc: "Browse custom roles" },
+      { action: "roles:create", label: "Create Roles",   desc: "Define new custom roles" },
+      { action: "roles:delete", label: "Delete Roles",   desc: "Remove unused custom roles" },
+    ],
+  },
 ];
 
 const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };

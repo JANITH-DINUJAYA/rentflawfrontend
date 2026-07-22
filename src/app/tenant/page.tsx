@@ -188,7 +188,7 @@ export default function TenantDashboard() {
         {[
           {
             label: "Current Invoice",
-            value: currentInvoice ? `$${Number(currentInvoice.total_due).toFixed(2)}` : "Clear",
+            value: currentInvoice ? `Rs ${Number(currentInvoice.total_due).toFixed(2)}` : "Clear",
             sub: currentInvoice ? `Due ${nextDue}` : "No outstanding bills",
             icon: DollarSign,
             color: currentInvoice?.status === "OVERDUE" ? "text-destructive bg-destructive/10" : "text-amber-500 bg-amber-500/10"
@@ -202,7 +202,7 @@ export default function TenantDashboard() {
           },
           {
             label: "Credit Balance",
-            value: `$${Number(creditBalance).toFixed(2)}`,
+            value: `Rs ${Number(creditBalance).toFixed(2)}`,
             sub: "Overpayment credit",
             icon: CheckCircle2,
             color: "text-emerald-500 bg-emerald-500/10"

@@ -223,13 +223,13 @@ export default function TenantSubmitPaymentPage() {
                       <Select value={invoiceId} onValueChange={v => v && handleInvoiceChange(v)}>
                         <SelectTrigger className="w-full" disabled={!hasActiveLease}>
                           {invoiceId
-                            ? <span className="flex flex-1 text-left truncate">{(() => { const inv = invoices.find(i => i.id === invoiceId); return inv ? `${inv.type} Invoice (${new Date(inv.due_date).toLocaleDateString()}) - $${Number(inv.total_due).toFixed(2)}` : invoiceId; })()}</span>
+                            ? <span className="flex flex-1 text-left truncate">{(() => { const inv = invoices.find(i => i.id === invoiceId); return inv ? `${inv.type} Invoice (${new Date(inv.due_date).toLocaleDateString()}) - Rs ${Number(inv.total_due).toFixed(2)}` : invoiceId; })()}</span>
                             : <SelectValue placeholder="Choose outstanding invoice" />}
                         </SelectTrigger>
                         <SelectContent>
                           {invoices.map(inv => (
                             <SelectItem key={inv.id} value={inv.id}>
-                              {`${inv.type} Invoice (${new Date(inv.due_date).toLocaleDateString()}) - $${Number(inv.total_due).toFixed(2)}`}
+                              {`${inv.type} Invoice (${new Date(inv.due_date).toLocaleDateString()}) - Rs ${Number(inv.total_due).toFixed(2)}`}
                             </SelectItem>
                           ))}
                         </SelectContent>

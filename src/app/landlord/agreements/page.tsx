@@ -79,7 +79,7 @@ export default function LandlordAgreementsPage() {
             (inv) =>
               `<tr>
                 <td>${new Date(inv.due_date).toLocaleDateString()}</td>
-                <td>$${Number(inv.total_due).toFixed(2)}</td>
+                <td>Rs ${Number(inv.total_due).toFixed(2)}</td>
                 <td style="text-transform:uppercase;font-weight:700;color:${inv.status === 'PAID' ? '#059669' : inv.status === 'OVERDUE' ? '#dc2626' : '#6b7280'}">${inv.status}</td>
               </tr>`
           )
@@ -140,13 +140,13 @@ export default function LandlordAgreementsPage() {
             <div class="field"><label>Property</label><p>${agr.property.name}</p></div>
             <div class="field"><label>Type</label><p>${agr.property.type || '—'}</p></div>
             <div class="field"><label>Room Number</label><p>${agr.room.room_number}</p></div>
-            <div class="field"><label>Base Rent</label><p>$${Number(agr.room.base_rent).toFixed(2)}</p></div>
+            <div class="field"><label>Base Rent</label><p>Rs ${Number(agr.room.base_rent).toFixed(2)}</p></div>
           </div>
 
           <h2>Agreement Terms</h2>
           <div class="grid">
-            <div class="field"><label>Monthly Rent</label><p>$${Number(agr.rent_amount).toFixed(2)}</p></div>
-            <div class="field"><label>Security Deposit</label><p>$${Number(agr.security_deposit).toFixed(2)}</p></div>
+            <div class="field"><label>Monthly Rent</label><p>Rs ${Number(agr.rent_amount).toFixed(2)}</p></div>
+            <div class="field"><label>Security Deposit</label><p>Rs ${Number(agr.security_deposit).toFixed(2)}</p></div>
             <div class="field"><label>Rent Collection Day</label><p>${agr.collection_day}${agr.collection_day === 1 ? 'st' : agr.collection_day === 2 ? 'nd' : agr.collection_day === 3 ? 'rd' : 'th'} of each month</p></div>
             <div class="field"><label>Leaving Option</label><p>${agr.leaving_option?.replace(/_/g, ' ') || '—'}</p></div>
             <div class="field"><label>Start Date</label><p>${new Date(agr.start_date).toLocaleDateString()}</p></div>
@@ -309,7 +309,7 @@ export default function LandlordAgreementsPage() {
             .map(a => ({
               tenant: `${a.tenant.first_name} ${a.tenant.last_name}`,
               property_room: `${a.property.name} / Rm ${a.room.room_number}`,
-              rent: `$${Number(a.rent_amount).toFixed(2)}`,
+              rent: `Rs ${Number(a.rent_amount).toFixed(2)}`,
               collection: `Day ${a.collection_day}`,
               start_date: new Date(a.start_date).toLocaleDateString(),
               end_date: new Date(a.end_date).toLocaleDateString(),

@@ -364,7 +364,7 @@ export default function TenantsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-sm font-semibold">
-                        {tenant.rentAmount !== undefined ? `$${tenant.rentAmount.toFixed(2)}` : "—"}
+                        {tenant.rentAmount !== undefined ? `Rs ${tenant.rentAmount.toFixed(2)}` : "—"}
                       </TableCell>
                     </TableRow>
                   ))
@@ -459,7 +459,7 @@ export default function TenantsPage() {
                   <Select value={inviteForm.roomId} onValueChange={handleRoomChange} disabled={!inviteForm.propertyId}>
                     <SelectTrigger className="w-full">
                       {inviteForm.roomId
-                        ? <span className="flex flex-1 text-left truncate">{(() => { const r = availableRooms.find(r => r.id === inviteForm.roomId); return r ? `Room ${r.room_number} (${r.occupancy_type}) - $${Number(r.base_rent).toFixed(2)}` : inviteForm.roomId; })()}</span>
+                        ? <span className="flex flex-1 text-left truncate">{(() => { const r = availableRooms.find(r => r.id === inviteForm.roomId); return r ? `Room ${r.room_number} (${r.occupancy_type}) - Rs ${Number(r.base_rent).toFixed(2)}` : inviteForm.roomId; })()}</span>
                         : <SelectValue placeholder="Choose room" />}
                     </SelectTrigger>
                     <SelectContent>
@@ -468,7 +468,7 @@ export default function TenantsPage() {
                       ) : (
                         availableRooms.map(r => (
                           <SelectItem key={r.id} value={r.id}>
-                            {`Room ${r.room_number} (${r.occupancy_type}) - $${Number(r.base_rent).toFixed(2)}`}
+                            {`Room ${r.room_number} (${r.occupancy_type}) - Rs ${Number(r.base_rent).toFixed(2)}`}
                           </SelectItem>
                         ))
                       )}

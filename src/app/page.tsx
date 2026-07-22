@@ -314,7 +314,7 @@ export default function LandingPage() {
               <div className="grid grid-cols-2 gap-4">
                 {[
                   { label: "Properties Managed", value: "10,000+" },
-                  { label: "Payments Processed", value: "$4.2M+" },
+                  { label: "Payments Processed", value: "Rs 4.2M+" },
                   { label: "Active Landlords", value: "500+" },
                   { label: "Tenant Accounts", value: "12,000+" },
                 ].map(stat => (
