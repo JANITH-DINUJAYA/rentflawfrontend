@@ -28,6 +28,9 @@ export default function AdminSystemPage() {
   const [emailStatus, setEmailStatus] = React.useState<string | null>(null);
   const [emailError, setEmailError] = React.useState<string | null>(null);
 
+  const [fixingStaff, setFixingStaff] = React.useState(false);
+  const [fixStaffResult, setFixStaffResult] = React.useState<{ fixed_count: number; details: string[] } | null>(null);
+
   const fetchLogs = async () => {
     setLogsLoading(true);
     try {
@@ -83,6 +86,20 @@ export default function AdminSystemPage() {
     }
   };
 
+  const handleFixStaffRoles = async () => {
+    setFixingStaff(true);
+    setFixStaffResult(null);
+    try {
+      const res = await api.post("/system/fix-staff-roles");
+      setFixStaffResult(res.data);
+      await fetchLogs();
+    } catch {
+      // silently fail
+    } finally {
+      setFixingStaff(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       {/* Header */}
@@ -123,6 +140,30 @@ export default function AdminSystemPage() {
                   Platform is in maintenance mode. Tenants cannot access the system.
                 </div>
               )}
+
+              {/* Fix Staff Login Access */}
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-bold mb-1">Fix Staff Login Access</p>
+                <p className="text-[10px] text-muted-foreground mb-2">If existing users added as staff cannot log in, run this to correct their access roles.</p>
+                <button
+                  onClick={handleFixStaffRoles}
+                  disabled={fixingStaff}
+                  className="w-full py-2 text-xs font-bold rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20 disabled:opacity-40 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  {fixingStaff ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shield className="h-3.5 w-3.5" />}
+                  {fixingStaff ? "Fixing..." : "Fix Staff Login Access"}
+                </button>
+                {fixStaffResult && (
+                  <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 text-emerald-600 text-[10px] font-semibold">
+                    ✓ Fixed {fixStaffResult.fixed_count} staff member(s).
+                    {fixStaffResult.details.length > 0 && (
+                      <ul className="mt-1 list-disc pl-3 space-y-0.5 text-[9px] font-normal">
+                        {fixStaffResult.details.map((d, i) => <li key={i}>{d}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
