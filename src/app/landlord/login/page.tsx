@@ -27,7 +27,11 @@ export default function LandlordLoginPage() {
 
       // Only allow LANDLORD or STAFF role
       if (user.global_role !== "LANDLORD" && user.global_role !== "STAFF") {
-        setError("Access Denied: This portal is for landlords and property managers only.");
+        if (user.global_role === "SAAS_ADMIN") {
+          setError("You are a Super Admin. Please use the Admin Control Center to log in.");
+        } else {
+          setError("Access Denied: This portal is for landlords and property managers only.");
+        }
         setLoading(false);
         return;
       }
@@ -155,8 +159,13 @@ export default function LandlordLoginPage() {
             </div>
 
             {error && (
-              <div className="px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive font-medium">
-                {error}
+              <div className="px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive font-medium space-y-1">
+                <p>{error}</p>
+                {error.includes("Super Admin") && (
+                  <p className="text-xs">
+                    👉 <Link href="/admin/login" className="underline font-bold">Click here to go to the Admin Portal</Link>
+                  </p>
+                )}
               </div>
             )}
 
@@ -181,6 +190,7 @@ export default function LandlordLoginPage() {
             </div>
             <div className="flex items-center justify-center gap-4 text-xs">
               <Link href="/login" className="text-muted-foreground hover:text-primary transition-colors">🔑 Tenant Login</Link>
+              <Link href="/admin/login" className="text-muted-foreground hover:text-primary transition-colors">🛡️ Admin Portal</Link>
             </div>
           </div>
         </div>
