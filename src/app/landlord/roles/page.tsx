@@ -137,6 +137,14 @@ const PERMISSION_GROUPS = [
       { action: "roles:delete", label: "Delete Roles",   desc: "Remove unused custom roles" },
     ],
   },
+  {
+    group: "Trash Bin",
+    permissions: [
+      { action: "trash:read",     label: "View Trash",      desc: "Access and audit soft-deleted items" },
+      { action: "trash:update",   label: "Restore Trash",   desc: "Restore archived items to active state" },
+      { action: "trash:delete",   label: "Purge Trash",     desc: "Permanently delete archived items" },
+    ],
+  },
 ];
 
 const emptyStaffForm = { email: "", first_name: "", last_name: "", phone: "", role_id: "", password: "" };
@@ -217,29 +225,54 @@ export default function LandlordRolesPage() {
     }
   };
 
-  const handleTogglePermission = async (role: CustomRole, action: string) => {
-    const existing = role.permissions.find(p => p.action === action);
-    try {
-      if (existing) {
-        await api.delete(`/roles/${role.id}/permissions/${existing.id}`);
-      } else {
-        await api.post(`/roles/${role.id}/permissions`, { action });
-      }
-      await fetchData();
-    } catch (err: any) {
-      alert("Failed to update role permissions.");
+  const [tempPermissions, setTempPermissions] = useState<Record<string, string[]>>({});
+  const [savingPermissions, setSavingPermissions] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (roles.length > 0) {
+      const initial: Record<string, string[]> = {};
+      roles.forEach(role => {
+        initial[role.id] = role.permissions.map(p => p.action);
+      });
+      setTempPermissions(initial);
     }
+  }, [roles]);
+
+  const handleTogglePermission = (roleId: string, action: string) => {
+    setTempPermissions(prev => {
+      const current = prev[roleId] || [];
+      const updated = current.includes(action)
+        ? current.filter(a => a !== action)
+        : [...current, action];
+      return { ...prev, [roleId]: updated };
+    });
   };
 
-  const handleToggleAllPermissions = async (role: CustomRole, grantAll: boolean) => {
+  const handleToggleAllPermissions = (roleId: string, grantAll: boolean) => {
+    const actions = grantAll
+      ? PERMISSION_GROUPS.flatMap(g => g.permissions.map(p => p.action))
+      : [];
+    setTempPermissions(prev => ({ ...prev, [roleId]: actions }));
+  };
+
+  const isPermissionsModified = (role: CustomRole) => {
+    const local = tempPermissions[role.id] || [];
+    const db = role.permissions.map(p => p.action);
+    if (local.length !== db.length) return true;
+    return !local.every(a => db.includes(a)) || !db.every(a => local.includes(a));
+  };
+
+  const handleSavePermissions = async (roleId: string) => {
+    const actions = tempPermissions[roleId] || [];
+    setSavingPermissions(prev => ({ ...prev, [roleId]: true }));
     try {
-      const actions = grantAll
-        ? PERMISSION_GROUPS.flatMap(g => g.permissions.map(p => p.action))
-        : [];
-      await api.put(`/roles/${role.id}/permissions`, { actions });
+      await api.put(`/roles/${roleId}/permissions`, { actions });
       await fetchData();
+      alert("Role permissions updated successfully!");
     } catch {
       alert("Failed to update role permissions.");
+    } finally {
+      setSavingPermissions(prev => ({ ...prev, [roleId]: false }));
     }
   };
 
@@ -382,14 +415,14 @@ export default function LandlordRolesPage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => handleToggleAllPermissions(role, true)}
+                            onClick={() => handleToggleAllPermissions(role.id, true)}
                             className="px-2.5 py-1 text-[10px] font-bold rounded bg-primary/10 text-primary hover:bg-primary/20 transition-all cursor-pointer"
                           >
-                            Select All (Super Admin)
+                            Select All
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleToggleAllPermissions(role, false)}
+                            onClick={() => handleToggleAllPermissions(role.id, false)}
                             className="px-2.5 py-1 text-[10px] font-bold rounded border border-border hover:bg-accent/40 text-muted-foreground transition-all cursor-pointer"
                           >
                             Deselect All
@@ -404,11 +437,12 @@ export default function LandlordRolesPage() {
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {grp.permissions.map(p => {
-                                const hasPerm = role.permissions.some(rp => rp.action === p.action);
+                                const hasPerm = (tempPermissions[role.id] || []).includes(p.action);
                                 return (
                                   <button
                                     key={p.action}
-                                    onClick={() => handleTogglePermission(role, p.action)}
+                                    type="button"
+                                    onClick={() => handleTogglePermission(role.id, p.action)}
                                     className={`flex items-start gap-2 p-2 rounded-sm text-left border transition-all cursor-pointer ${hasPerm ? "border-primary/30 bg-primary/5 text-primary" : "border-border hover:bg-accent/40"}`}
                                   >
                                     <div className="mt-0.5 flex-shrink-0">
@@ -425,6 +459,22 @@ export default function LandlordRolesPage() {
                           </div>
                         ))}
                       </div>
+                      
+                      {/* Save Button for modified permissions */}
+                      {isPermissionsModified(role) && (
+                        <div className="pt-4 border-t border-border flex items-center justify-between bg-primary/5 p-3 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 duration-250">
+                          <p className="text-xs font-medium text-primary">You have unsaved changes to this role&apos;s permissions.</p>
+                          <button
+                            type="button"
+                            onClick={() => handleSavePermissions(role.id)}
+                            disabled={savingPermissions[role.id]}
+                            className="px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-lg shadow-md hover:opacity-90 transition-all flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
+                          >
+                            {savingPermissions[role.id] && <Loader2 className="h-3 w-3 animate-spin" />}
+                            Save Permissions
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

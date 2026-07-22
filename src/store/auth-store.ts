@@ -69,6 +69,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
+    const state = useAuthStore.getState();
+    if (state.initialized && state.user) {
+      return;
+    }
     const token = localStorage.getItem('rf-access-token');
     if (!token) {
       set({ user: null, loading: false, initialized: true });
