@@ -28,7 +28,7 @@ function MiniBar({ value, max, color }: { value: number; max: number; color: str
     <div className="h-8 w-full rounded-lg bg-muted/40 relative overflow-hidden">
       <div className={`absolute left-0 top-0 h-full ${color} rounded-lg transition-all duration-700`} style={{ width: `${pct}%` }} />
       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-foreground/70">
-        ${value.toLocaleString()}
+        Rs {value.toLocaleString()}
       </span>
     </div>
   );
@@ -301,14 +301,14 @@ export default function AdminReportsPage() {
                       <p className="text-[10px] text-muted-foreground">{inv.agreement?.property?.name || "—"}</p>
                       <p className="text-[10px] text-destructive font-semibold mt-0.5">{daysPast} days overdue</p>
                     </div>
-                    <span className="text-sm font-black text-destructive whitespace-nowrap">${Number(inv.total_due).toFixed(0)}</span>
+                    <span className="text-sm font-black text-destructive whitespace-nowrap">Rs {Number(inv.total_due).toFixed(0)}</span>
                   </div>
                 );
               })
             )}
             {overdueList.length > 0 && (
               <div className="text-center text-xs text-muted-foreground pt-1 border-t border-border">
-                Total overdue: <span className="font-bold text-destructive">${Number(totalOverdue).toLocaleString()}</span>
+                Total overdue: <span className="font-bold text-destructive">Rs {Number(totalOverdue).toLocaleString()}</span>
               </div>
             )}
           </CardContent>
@@ -337,7 +337,7 @@ export default function AdminReportsPage() {
                       <p className="text-muted-foreground">{t.propertyName} · Rm {t.roomNumber}</p>
                     </div>
                   </div>
-                  <span className="font-bold text-foreground">${Number(t.rentAmount).toFixed(0)}/mo</span>
+                  <span className="font-bold text-foreground">Rs {Number(t.rentAmount).toFixed(0)}/mo</span>
                 </div>
               ))}
               {tenants.length > 15 && (

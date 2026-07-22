@@ -141,8 +141,8 @@ export default function AdminAgreementsPage() {
                         <span className="font-medium block">{a.property?.name}</span>
                         <span className="text-xs text-muted-foreground">Room {a.room?.room_number}</span>
                       </TableCell>
-                      <TableCell className="text-sm font-semibold">${Number(a.rent_amount).toFixed(2)}</TableCell>
-                      <TableCell className="text-sm font-semibold">${Number(a.security_deposit).toFixed(2)}</TableCell>
+                      <TableCell className="text-sm font-semibold">Rs {Number(a.rent_amount).toFixed(2)}</TableCell>
+                      <TableCell className="text-sm font-semibold">Rs {Number(a.security_deposit).toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={

@@ -331,7 +331,7 @@ export default function AdminSubscriptionsPage() {
                     Requested Limits: <span className="font-semibold text-foreground">{req.max_properties} Properties</span> · <span className="font-semibold text-foreground">{req.max_tenants} Tenants</span> · <span className="font-semibold text-foreground">{req.max_staff} Staff</span>
                   </p>
                   {req.notes && <p className="text-xs text-muted-foreground italic">&ldquo;{req.notes}&rdquo;</p>}
-                  {req.offered_price && <p className="text-xs font-bold text-primary">Approved Price: ${req.offered_price}/month</p>}
+                  {req.offered_price && <p className="text-xs font-bold text-primary">Approved Price: Rs {req.offered_price}/month</p>}
                 </div>
 
                 {req.status === "PENDING" && (
@@ -375,7 +375,7 @@ export default function AdminSubscriptionsPage() {
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Package: <span className="font-bold text-foreground">{p.package.name}</span> · Amount: <span className="font-bold text-foreground">${p.amount}</span>
+                    Package: <span className="font-bold text-foreground">{p.package.name}</span> · Amount: <span className="font-bold text-foreground">Rs {p.amount}</span>
                   </p>
                   {p.notes && <p className="text-xs text-muted-foreground italic">Ref: {p.notes}</p>}
                   <a

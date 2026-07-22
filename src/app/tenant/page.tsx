@@ -99,7 +99,7 @@ export default function TenantDashboard() {
               You are invited to join {pendingAgreement.property.name} — Room {pendingAgreement.room.room_number}
             </h4>
             <p className="text-xs text-muted-foreground">
-              Rent: ${Number(pendingAgreement.rent_amount).toFixed(2)}/mo · Security Deposit: ${Number(pendingAgreement.security_deposit).toFixed(2)}
+              Rent: Rs {Number(pendingAgreement.rent_amount).toFixed(2)}/mo · Security Deposit: Rs {Number(pendingAgreement.security_deposit).toFixed(2)}
             </p>
           </div>
           <button
@@ -143,7 +143,7 @@ export default function TenantDashboard() {
                     <Clock className="h-3 w-3" /> Deposit Refund Pending
                   </p>
                   <p className="font-extrabold text-sm text-foreground">
-                    ${Number(agr.deposit_refund.refund_amount).toFixed(2)} — {agr.property?.name}
+                    Rs {Number(agr.deposit_refund.refund_amount).toFixed(2)} — {agr.property?.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Your landlord has not yet settled this deposit refund. Contact them if overdue.
@@ -247,7 +247,7 @@ export default function TenantDashboard() {
                   <span className="text-xs text-muted-foreground">Inv #{currentInvoice.id.slice(0, 8)}...</span>
                 </div>
                 <p className="font-bold text-xl">{currentInvoice.type} Invoice</p>
-                <p className="text-3xl font-black">${Number(currentInvoice.total_due).toFixed(2)}</p>
+                <p className="text-3xl font-black">Rs {Number(currentInvoice.total_due).toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Due: {new Date(currentInvoice.due_date).toLocaleDateString()}</p>
               </div>
               <Link
@@ -284,7 +284,7 @@ export default function TenantDashboard() {
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="font-bold text-sm">${Number(inv.total_due).toFixed(2)}</span>
+                    <span className="font-bold text-sm">Rs {Number(inv.total_due).toFixed(2)}</span>
                     <Badge variant="outline" className={`${STATUS_META[inv.status as keyof typeof STATUS_META].color} border-none font-bold`}>
                       {React.createElement(STATUS_META[inv.status as keyof typeof STATUS_META].icon, { className: "h-3.5 w-3.5 mr-1" })}
                       {STATUS_META[inv.status as keyof typeof STATUS_META].label}

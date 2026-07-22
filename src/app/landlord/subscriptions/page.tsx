@@ -306,7 +306,7 @@ export default function LandlordSubscriptionsPage() {
           <DialogHeader>
             <DialogTitle>Subscribe to {upgradeTarget?.name}</DialogTitle>
             <DialogDescription>
-              Amount due: <span className="font-bold text-foreground">${upgradeTarget?.price}/month</span>. Choose your payment method below.
+              Amount due: <span className="font-bold text-foreground">Rs {upgradeTarget?.price}/month</span>. Choose your payment method below.
             </DialogDescription>
           </DialogHeader>
 

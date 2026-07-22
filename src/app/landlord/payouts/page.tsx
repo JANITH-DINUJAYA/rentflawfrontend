@@ -191,7 +191,7 @@ export default function PayoutsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="text-xs">
-                            <p className="font-semibold text-destructive">${Number(ref.deductions).toFixed(2)}</p>
+                            <p className="font-semibold text-destructive">Rs {Number(ref.deductions).toFixed(2)}</p>
                             {ref.reason && (
                               <p className="text-[10px] text-muted-foreground italic truncate max-w-[200px]" title={ref.reason}>
                                 "{ref.reason}"
@@ -200,7 +200,7 @@ export default function PayoutsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm font-extrabold text-emerald-600">
-                          ${Number(ref.refund_amount).toFixed(2)}
+                          Rs {Number(ref.refund_amount).toFixed(2)}
                         </TableCell>
                         <TableCell>
                           {ref.is_paid ? (
@@ -257,7 +257,7 @@ export default function PayoutsPage() {
                       <TableCell className="text-sm font-mono font-semibold">{c.tenant_code || "—"}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{c.phone || "—"}</TableCell>
                       <TableCell className="text-sm font-extrabold text-primary">
-                        ${Number(c.credit_amount).toFixed(2)}
+                        Rs {Number(c.credit_amount).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
                         <button
@@ -307,7 +307,7 @@ export default function PayoutsPage() {
               <div className="flex justify-between border-t border-emerald-500/10 pt-2 text-sm">
                 <span className="font-bold text-foreground">Total Payout Amount:</span>
                 <span className="font-extrabold text-emerald-600">
-                  ${activeTab === "REFUNDS" ? Number(payoutTarget.refund_amount).toFixed(2) : Number(payoutTarget.credit_amount).toFixed(2)}
+                  Rs {activeTab === "REFUNDS" ? Number(payoutTarget.refund_amount).toFixed(2) : Number(payoutTarget.credit_amount).toFixed(2)}
                 </span>
               </div>
             </div>

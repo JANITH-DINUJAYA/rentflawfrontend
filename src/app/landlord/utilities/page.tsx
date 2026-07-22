@@ -166,7 +166,7 @@ export default function UtilitiesPage() {
             <RefreshCw className="h-4 w-4" />
           </button>
           <span className="text-sm font-semibold text-muted-foreground">
-            Total shown: <span className="text-foreground font-bold">${totalAmount.toFixed(2)}</span>
+            Total shown: <span className="text-foreground font-bold">Rs {totalAmount.toFixed(2)}</span>
           </span>
         </div>
       </div>
@@ -218,7 +218,7 @@ export default function UtilitiesPage() {
                           <p className="text-xs text-muted-foreground">{propertyName} · Rm {roomNumber}</p>
                         </TableCell>
                         <TableCell className="font-mono text-xs">{b.invoice_id?.slice(0, 8)}...</TableCell>
-                        <TableCell className="font-bold">${Number(b.amount).toFixed(2)}</TableCell>
+                        <TableCell className="font-bold">Rs {Number(b.amount).toFixed(2)}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{billingDate}</TableCell>
                         <TableCell className="text-right">
                           <ChevronDown className={`h-4 w-4 text-muted-foreground ml-auto transition-transform ${isOpen ? "rotate-180" : ""}`} />
@@ -243,15 +243,15 @@ export default function UtilitiesPage() {
                                 </div>
                                 <div>
                                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Rate/Unit</p>
-                                  <p className="font-semibold">${Number(b.rate_per_unit).toFixed(3)}</p>
+                                  <p className="font-semibold">Rs {Number(b.rate_per_unit).toFixed(3)}</p>
                                 </div>
                                 <div>
                                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Calculated Amount</p>
-                                  <p className="font-bold text-primary">${Number(b.amount).toFixed(2)}</p>
+                                  <p className="font-bold text-primary">Rs {Number(b.amount).toFixed(2)}</p>
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-sm text-muted-foreground">Flat charge: <span className="font-bold text-foreground">${Number(b.amount).toFixed(2)}</span></p>
+                              <p className="text-sm text-muted-foreground">Flat charge: <span className="font-bold text-foreground">Rs {Number(b.amount).toFixed(2)}</span></p>
                             )}
                           </TableCell>
                         </TableRow>
@@ -334,7 +334,7 @@ export default function UtilitiesPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="utlAmount">
-                Amount {derivedAmount && derivedAmount !== form.amount ? <span className="text-primary font-bold">(Calculated: ${derivedAmount})</span> : "(or enter flat charge)"}
+                Amount {derivedAmount && derivedAmount !== form.amount ? <span className="text-primary font-bold">(Calculated: Rs {derivedAmount})</span> : "(or enter flat charge)"}
               </Label>
               <Input id="utlAmount" type="number" step="0.01" placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
             </div>

@@ -392,7 +392,7 @@ export default function LandlordAgreementsPage() {
                           <p className="text-xs text-muted-foreground">Room {agr.room.room_number}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm font-semibold">${Number(agr.rent_amount).toFixed(2)}</TableCell>
+                      <TableCell className="text-sm font-semibold">Rs {Number(agr.rent_amount).toFixed(2)}</TableCell>
                       <TableCell className="text-sm">{agr.collection_day}th</TableCell>
                       <TableCell>
                         <div className="text-xs text-muted-foreground">
@@ -490,19 +490,19 @@ export default function LandlordAgreementsPage() {
                     </div>
                     <div className="p-2.5 flex justify-between">
                       <span className="text-muted-foreground">Security Deposit Held:</span>
-                      <span className="font-bold text-primary">${terminationCost.security_deposit.toFixed(2)}</span>
+                      <span className="font-bold text-primary">Rs {terminationCost.security_deposit.toFixed(2)}</span>
                     </div>
                     <div className="p-2.5 flex justify-between">
                       <span className="text-muted-foreground">Prorated Final Month Rent ({terminationCost.days_to_pay_for} days):</span>
-                      <span className="font-bold">${terminationCost.final_invoice_amount.toFixed(2)}</span>
+                      <span className="font-bold">Rs {terminationCost.final_invoice_amount.toFixed(2)}</span>
                     </div>
                     <div className="p-2.5 flex justify-between">
                       <span className="text-muted-foreground">Tenant Unpaid Invoices ({terminationCost.unpaid_invoices.length}):</span>
-                      <span className="font-bold text-destructive">${terminationCost.total_outstanding.toFixed(2)}</span>
+                      <span className="font-bold text-destructive">Rs {terminationCost.total_outstanding.toFixed(2)}</span>
                     </div>
                     <div className="p-2.5 bg-accent/20 flex justify-between font-bold">
                       <span className="text-foreground">Total Dues (Final + Outstanding):</span>
-                      <span className="text-destructive">${(terminationCost.final_invoice_amount + terminationCost.total_outstanding).toFixed(2)}</span>
+                      <span className="text-destructive">Rs {(terminationCost.final_invoice_amount + terminationCost.total_outstanding).toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -523,7 +523,7 @@ export default function LandlordAgreementsPage() {
                         <div className="flex justify-between items-center text-[11px] font-bold">
                           <span className="text-muted-foreground">Remaining Deposit to Refund:</span>
                           <span className="text-emerald-500 font-mono text-sm">
-                            ${Math.max(0, terminationCost.security_deposit - (terminationCost.final_invoice_amount + terminationCost.total_outstanding)).toFixed(2)}
+                            Rs {Math.max(0, terminationCost.security_deposit - (terminationCost.final_invoice_amount + terminationCost.total_outstanding)).toFixed(2)}
                           </span>
                         </div>
                         <div className="space-y-1">

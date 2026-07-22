@@ -155,11 +155,11 @@ export default function TenantRentalHistoryPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground uppercase font-semibold">Monthly Rent</p>
-                      <p className="font-bold mt-0.5">${Number(agr.rent_amount).toFixed(2)}</p>
+                      <p className="font-bold mt-0.5">Rs {Number(agr.rent_amount).toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground uppercase font-semibold">Deposit Paid</p>
-                      <p className="font-bold mt-0.5">${Number(agr.security_deposit).toFixed(2)}</p>
+                      <p className="font-bold mt-0.5">Rs {Number(agr.security_deposit).toFixed(2)}</p>
                     </div>
                   </div>
 
@@ -196,13 +196,13 @@ export default function TenantRentalHistoryPage() {
                         <div>
                           <p className="text-muted-foreground">Refunded Amount:</p>
                           <p className="font-bold text-emerald-500 font-mono mt-0.5">
-                            ${Number(agr.deposit_refund.refund_amount).toFixed(2)}
+                            Rs {Number(agr.deposit_refund.refund_amount).toFixed(2)}
                           </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Deductions:</p>
                           <p className="font-bold text-destructive font-mono mt-0.5">
-                            ${Number(agr.deposit_refund.deductions).toFixed(2)}
+                            Rs {Number(agr.deposit_refund.deductions).toFixed(2)}
                           </p>
                         </div>
                       </div>

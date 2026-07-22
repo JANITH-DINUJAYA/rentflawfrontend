@@ -324,7 +324,7 @@ export default function RoomsPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-sm">{room.capacity}</TableCell>
-                    <TableCell className="text-sm font-semibold">${Number(room.base_rent).toFixed(2)}</TableCell>
+                    <TableCell className="text-sm font-semibold">Rs {Number(room.base_rent).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button

@@ -187,6 +187,18 @@ export default function AdminRolesPage() {
     }
   };
 
+  const handleToggleAllPermissions = async (role: CustomRole, grantAll: boolean) => {
+    try {
+      const actions = grantAll
+        ? PERMISSION_GROUPS.flatMap(g => g.permissions.map(p => p.action))
+        : [];
+      await api.put(`/roles/${role.id}/permissions`, { actions });
+      await fetchData();
+    } catch {
+      alert("Failed to update system role permissions.");
+    }
+  };
+
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     const { email, first_name, last_name, phone, role_id, password } = staffForm;
@@ -323,6 +335,22 @@ export default function AdminRolesPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                      <div className="flex gap-2 justify-end mb-4 border-b border-border pb-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAllPermissions(role, true)}
+                          className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all cursor-pointer"
+                        >
+                          Select All (Super Admin)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAllPermissions(role, false)}
+                          className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-border hover:bg-accent/40 text-muted-foreground transition-all cursor-pointer"
+                        >
+                          Deselect All
+                        </button>
+                      </div>
                       {PERMISSION_GROUPS.map(grp => (
                         <div key={grp.group} className="space-y-2">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-primary border-b pb-1">

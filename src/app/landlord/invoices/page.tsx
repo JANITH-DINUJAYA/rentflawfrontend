@@ -361,11 +361,11 @@ export default function InvoicesPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs">
-                        <p>Amount: ${Number(inv.amount).toFixed(2)}</p>
-                        {Number(inv.discount) > 0 && <p className="text-emerald-500">Discount: -${Number(inv.discount).toFixed(2)}</p>}
-                        {Number(inv.late_fee_applied) > 0 && <p className="text-destructive font-semibold">Late Fee: +${Number(inv.late_fee_applied).toFixed(2)}</p>}
+                        <p>Amount: Rs {Number(inv.amount).toFixed(2)}</p>
+                        {Number(inv.discount) > 0 && <p className="text-emerald-500">Discount: -Rs {Number(inv.discount).toFixed(2)}</p>}
+                        {Number(inv.late_fee_applied) > 0 && <p className="text-destructive font-semibold">Late Fee: +Rs {Number(inv.late_fee_applied).toFixed(2)}</p>}
                       </TableCell>
-                      <TableCell className="font-bold">${Number(inv.total_due).toFixed(2)}</TableCell>
+                      <TableCell className="font-bold">Rs {Number(inv.total_due).toFixed(2)}</TableCell>
                       <TableCell className="text-xs">{new Date(inv.due_date).toLocaleDateString()}</TableCell>
                       <TableCell>
                         {inv.status === "PAID" ? (

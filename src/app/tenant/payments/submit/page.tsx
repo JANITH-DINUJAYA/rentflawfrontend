@@ -399,7 +399,7 @@ export default function TenantSubmitPaymentPage() {
                       </div>
                       <div className="flex justify-between font-medium">
                         <span>Amount Paid:</span>
-                        <span className="font-bold text-foreground">${Number(sub.amount_paid).toFixed(2)}</span>
+                        <span className="font-bold text-foreground">Rs {Number(sub.amount_paid).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-[10px] text-muted-foreground">
                         <span>Submitted Date:</span>

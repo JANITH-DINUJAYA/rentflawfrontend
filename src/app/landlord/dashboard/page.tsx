@@ -168,7 +168,7 @@ export default function LandlordDashboard() {
               </div>
             </div>
             <div className="space-y-1">
-              <h3 className="text-3xl font-extrabold">${stats.monthlyRevenue.toFixed(2)}</h3>
+              <h3 className="text-3xl font-extrabold">Rs {stats.monthlyRevenue.toFixed(2)}</h3>
               <p className="text-xs text-muted-foreground">Total paid collections this month</p>
             </div>
           </CardContent>
@@ -184,7 +184,7 @@ export default function LandlordDashboard() {
               </div>
             </div>
             <div className="space-y-1">
-              <h3 className="text-3xl font-extrabold text-destructive">${stats.overdueAmount.toFixed(2)}</h3>
+              <h3 className="text-3xl font-extrabold text-destructive">Rs {stats.overdueAmount.toFixed(2)}</h3>
               <p className="text-xs text-muted-foreground">Unpaid invoices past grace period</p>
             </div>
           </CardContent>
@@ -231,7 +231,7 @@ export default function LandlordDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
-                        <span className="text-sm font-bold text-foreground">${Number(p.amount_paid).toFixed(2)}</span>
+                        <span className="text-sm font-bold text-foreground">Rs {Number(p.amount_paid).toFixed(2)}</span>
                         <Link href={`/landlord/payments`}>
                           <button className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 shadow-sm transition-all duration-200 cursor-pointer">
                             Review Receipt
@@ -273,7 +273,7 @@ export default function LandlordDashboard() {
                         <p className="text-xs text-muted-foreground">Due {new Date(inv.due_date).toLocaleDateString()}</p>
                       </div>
                       <div className="flex items-center space-x-3">
-                        <span className="font-bold">${Number(inv.amount).toFixed(2)}</span>
+                        <span className="font-bold">Rs {Number(inv.amount).toFixed(2)}</span>
                         {inv.status === "PAID" ? (
                           <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border-none">
                             <CheckCircle className="mr-1 h-3 w-3" /> Paid

@@ -248,13 +248,13 @@ export default function TenantAgreementPage() {
                             <p className="font-semibold">Rent Invoice</p>
                             <p className="text-[10px] text-muted-foreground">Due: {new Date(inv.due_date).toLocaleDateString()}</p>
                           </div>
-                          <span className="font-mono font-bold text-destructive">${Number(inv.total_due).toFixed(2)}</span>
+                          <span className="font-mono font-bold text-destructive">Rs {Number(inv.total_due).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                     <div className="p-2.5 bg-destructive/5 text-xs font-bold text-right flex justify-between items-center border-t border-border">
                       <span className="text-muted-foreground">Total Outstanding:</span>
-                      <span className="text-destructive font-mono font-black text-sm">${Number(terminationCost.total_outstanding).toFixed(2)}</span>
+                      <span className="text-destructive font-mono font-black text-sm">Rs {Number(terminationCost.total_outstanding).toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -275,12 +275,12 @@ export default function TenantAgreementPage() {
                     </div>
                     <div className="p-3 flex justify-between items-center text-xs">
                       <span className="text-muted-foreground">Stay Dates / Prorated Fee:</span>
-                      <span className="font-mono font-bold text-emerald-500">${Number(terminationCost.final_invoice_amount).toFixed(2)}</span>
+                      <span className="font-mono font-bold text-emerald-500">Rs {Number(terminationCost.final_invoice_amount).toFixed(2)}</span>
                     </div>
                   </div>
 
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Confirming this request will submit it to your landlord for review. Upon approval, a final invoice of <strong className="text-foreground">${Number(terminationCost.final_invoice_amount).toFixed(2)}</strong> will be generated.
+                    Confirming this request will submit it to your landlord for review. Upon approval, a final invoice of <strong className="text-foreground">Rs {Number(terminationCost.final_invoice_amount).toFixed(2)}</strong> will be generated.
                   </p>
                 </div>
               )}
@@ -386,7 +386,7 @@ function AgreementCard({
             <p className="text-xs text-muted-foreground">Leaving Rule: {leavingOptionLabel[agreement.leaving_rule]}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            Grace Period: {agreement.grace_period_days} days · Late Fee: ${Number(agreement.late_fee_flat).toFixed(2)}
+            Grace Period: {agreement.grace_period_days} days · Late Fee: Rs {Number(agreement.late_fee_flat).toFixed(2)}
           </p>
         </div>
 

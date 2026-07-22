@@ -133,6 +133,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, checkAuth, initialized } = useAuthStore();
   const pathname = usePathname();
   const router = useRouter();
+  const { modeTheme, setModeTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [notifications, setNotifications] = React.useState<any[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
@@ -218,8 +219,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
-  const { modeTheme, setModeTheme } = useTheme();
 
   // Detect portal from URL path first — this works before auth is connected
   const portalRole: keyof typeof portalConfig =

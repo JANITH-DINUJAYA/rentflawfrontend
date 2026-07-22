@@ -212,17 +212,17 @@ export default function TenantInvoicesPage() {
                           </p>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">${Number(inv.amount).toFixed(2)}</TableCell>
+                      <TableCell className="text-sm">Rs {Number(inv.amount).toFixed(2)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground space-y-0.5">
                         {Number(inv.discount) > 0 && (
-                          <p className="text-emerald-500">-${Number(inv.discount).toFixed(2)} discount</p>
+                          <p className="text-emerald-500">-Rs {Number(inv.discount).toFixed(2)} discount</p>
                         )}
                         {Number(inv.late_fee_applied) > 0 && (
-                          <p className="text-destructive">+${Number(inv.late_fee_applied).toFixed(2)} late fee</p>
+                          <p className="text-destructive">+Rs {Number(inv.late_fee_applied).toFixed(2)} late fee</p>
                         )}
                         {Number(inv.discount) === 0 && Number(inv.late_fee_applied) === 0 && "—"}
                       </TableCell>
-                      <TableCell className="font-bold text-sm">${Number(inv.total_due).toFixed(2)}</TableCell>
+                      <TableCell className="font-bold text-sm">Rs {Number(inv.total_due).toFixed(2)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {new Date(inv.due_date).toLocaleDateString()}
                       </TableCell>
@@ -291,7 +291,7 @@ export default function TenantInvoicesPage() {
                 </div>
                 <div className="flex justify-between border-t border-primary/10 pt-2 text-sm">
                   <span className="font-bold text-foreground">Amount Due:</span>
-                  <span className="font-extrabold text-primary">${Number(paymentTarget.total_due).toFixed(2)}</span>
+                  <span className="font-extrabold text-primary">Rs {Number(paymentTarget.total_due).toFixed(2)}</span>
                 </div>
               </div>
 

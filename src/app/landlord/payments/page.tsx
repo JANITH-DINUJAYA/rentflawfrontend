@@ -200,7 +200,7 @@ export default function PaymentsPage() {
                         <p className="text-sm font-medium">{propertyName}</p>
                         <p className="text-xs text-muted-foreground">Rm {roomNumber}</p>
                       </TableCell>
-                      <TableCell className="font-bold">${Number(p.amount_paid).toFixed(2)}</TableCell>
+                      <TableCell className="font-bold">Rs {Number(p.amount_paid).toFixed(2)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {new Date(p.payment_date || p.created_at).toLocaleDateString()}
                       </TableCell>
@@ -275,11 +275,11 @@ export default function PaymentsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Amount Paid</p>
-                  <p className="font-bold text-lg">${Number(reviewPayment.amount_paid).toFixed(2)}</p>
+                  <p className="font-bold text-lg">Rs {Number(reviewPayment.amount_paid).toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Invoice Total Due</p>
-                  <p className="font-semibold">${Number(reviewPayment.invoice?.total_due || 0).toFixed(2)}</p>
+                  <p className="font-semibold">Rs {Number(reviewPayment.invoice?.total_due || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Payment Date</p>
