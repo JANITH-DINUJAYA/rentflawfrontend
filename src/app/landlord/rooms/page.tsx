@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api";
 import { TableExportControls } from "@/components/table-export-controls";
 
-type OccupancyType = "SINGLE" | "SHARED" | "STUDIO";
+type OccupancyType = "SINGLE" | "SHARED" | "STUDIO" | "ENTIRE";
 
 interface Floor { id: string; name: string; property?: { name: string }; }
 interface Room {
@@ -167,6 +167,7 @@ export default function RoomsPage() {
     SINGLE: "bg-blue-500/10 text-blue-600",
     SHARED: "bg-purple-500/10 text-purple-600",
     STUDIO: "bg-green-500/10 text-green-600",
+    ENTIRE: "bg-blue-500/10 text-blue-600",
   };
 
   const filtered = rooms.filter(r =>
