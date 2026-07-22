@@ -6,7 +6,7 @@ import {
   BarChart3,
   TrendingUp,
   Users,
-  DollarSign,
+  Coins,
   AlertCircle,
   Building2,
   Loader2,
@@ -236,7 +236,7 @@ export default function AdminReportsPage() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Platform 6M Income", value: `Rs ${totalIncome.toLocaleString()}`, icon: DollarSign, color: "text-emerald-500 bg-emerald-500/10" },
+          { label: "Platform 6M Income", value: `Rs ${totalIncome.toLocaleString()}`, icon: Coins, color: "text-emerald-500 bg-emerald-500/10" },
           { label: "Active Tenants", value: String(tenants.length), icon: Users, color: "text-sky-500 bg-sky-500/10" },
           { label: "Overdue Balance", value: `Rs ${Number(totalOverdue).toLocaleString()}`, icon: AlertCircle, color: "text-destructive bg-destructive/10" },
           { label: "Overall Occupancy", value: `${Math.round(occupancyPct)}%`, icon: Building2, color: "text-violet-500 bg-violet-500/10" },

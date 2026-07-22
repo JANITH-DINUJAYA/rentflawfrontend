@@ -12,7 +12,8 @@ import {
   AlertCircle,
   Pencil,
   CheckSquare,
-  Square
+  Square,
+  Printer
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -180,6 +181,86 @@ export default function PropertiesPage() {
     } else {
       setSelectedIds(prev => [...new Set([...prev, ...filteredIds])]);
     }
+  };
+
+  const handlePrintProperty = (p: any) => {
+    const typeLabel = getReadableType(p.type);
+    let roomsHtml = '';
+    if (p.floors && p.floors.length > 0) {
+      roomsHtml += `
+        <h2 style="margin-top:20px;border-bottom:1px solid #e5e7eb;padding-bottom:6px">Rooms and Units List</h2>
+        <table style="width:100%;border-collapse:collapse;margin-top:10px">
+          <thead>
+            <tr style="background:#f3f4f6;text-align:left">
+              <th style="padding:8px;font-size:11px;font-weight:700;color:#374151">Floor</th>
+              <th style="padding:8px;font-size:11px;font-weight:700;color:#374151">Room Number</th>
+              <th style="padding:8px;font-size:11px;font-weight:700;color:#374151">Rent Price</th>
+              <th style="padding:8px;font-size:11px;font-weight:700;color:#374151">Capacity</th>
+              <th style="padding:8px;font-size:11px;font-weight:700;color:#374151">Type</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      p.floors.forEach((f: any) => {
+        if (f.rooms && f.rooms.length > 0) {
+          f.rooms.forEach((r: any) => {
+            roomsHtml += `
+              <tr style="border-bottom:1px solid #e5e7eb">
+                <td style="padding:8px;font-size:12px;color:#4b5563">${f.name}</td>
+                <td style="padding:8px;font-size:12px;color:#111827;font-weight:600">Room ${r.room_number}</td>
+                <td style="padding:8px;font-size:12px;color:#111827;font-weight:600">Rs ${Number(r.base_rent).toFixed(2)}</td>
+                <td style="padding:8px;font-size:12px;color:#4b5563">${r.capacity} beds</td>
+                <td style="padding:8px;font-size:12px;color:#4b5563;text-transform:uppercase">${r.occupancy_type || '—'}</td>
+              </tr>
+            `;
+          });
+        }
+      });
+      roomsHtml += `
+          </tbody>
+        </table>
+      `;
+    }
+
+    const html = `
+      <html>
+        <head>
+          <title>Property Details - ${p.name}</title>
+          <style>
+            body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:40px;margin:0}
+            .header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #e5e7eb;padding-bottom:15px;margin-bottom:25px}
+            .brand{font-size:22px;font-weight:900;color:#4f46e5}
+            .brand span{font-size:12px;font-weight:500;color:#6b7280;display:block;margin-top:2px}
+            .badge{padding:4px 10px;border-radius:9999px;font-size:11px;font-weight:700;background:#e0e7ff;color:#4f46e5}
+            h2{font-size:15px;font-weight:700;color:#4f46e5;margin:15px 0 8px}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;margin-bottom:8px}
+            .field label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+            .field p{font-size:13px;color:#111827;font-weight:600;margin-top:2px}
+            .footer{margin-top:50px;padding-top:15px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af}
+            @media print{body{padding:20px}}
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="brand">RentFlaw<span>Property Details Overview</span></div>
+            <div class="badge">${typeLabel}</div>
+          </div>
+          <h2>Property Info</h2>
+          <div class="grid">
+            <div class="field"><label>Property Name</label><p>${p.name}</p></div>
+            <div class="field"><label>Full Address</label><p>${p.address}</p></div>
+            <div class="field"><label>Property Type</label><p>${typeLabel}</p></div>
+          </div>
+          ${roomsHtml}
+          <div class="footer">RentFlaw &mdash; Global Rental Management SaaS &nbsp;&bull;&nbsp; Generated: ${new Date().toLocaleDateString()}</div>
+          <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script>
+        </body>
+      </html>
+    `;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Popup blocked — please allow popups for this site."); return; }
+    w.document.write(html);
+    w.document.close();
   };
 
   // Helper helper to format backend enum type to readable label
@@ -375,6 +456,13 @@ export default function PropertiesPage() {
                         ID: {p.id.slice(0, 8)}...
                       </span>
                       <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handlePrintProperty(p)}
+                          className="p-2 rounded-lg border border-border text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                          title="Print Property"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => handleOpenEdit(p)}
                           className="p-2 rounded-lg border border-border text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"

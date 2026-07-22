@@ -89,6 +89,25 @@ export default function LandlordSubscriptionsPage() {
     }
   };
 
+  const handleSelectPlan = async (pkg: Package) => {
+    if (Number(pkg.price) === 0) {
+      if (confirm(`Are you sure you want to select the ${pkg.name} (Free Plan)? Your subscription limits will adjust immediately.`)) {
+        setUpgrading(true);
+        try {
+          await api.post("/subscriptions/upgrade", { packageId: pkg.id });
+          alert(`Successfully subscribed to ${pkg.name}!`);
+          await fetchData();
+        } catch (err: any) {
+          alert(err?.response?.data?.message || "Failed to subscribe to package.");
+        } finally {
+          setUpgrading(false);
+        }
+      }
+    } else {
+      setUpgradeTarget(pkg);
+    }
+  };
+
   const handleUpgrade = async () => {
     if (!upgradeTarget) return;
     setUpgrading(true);
@@ -285,7 +304,7 @@ export default function LandlordSubscriptionsPage() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => setUpgradeTarget(pkg)}
+                          onClick={() => handleSelectPlan(pkg)}
                           className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
                         >
                           Select Plan <ArrowRight className="h-3.5 w-3.5" />

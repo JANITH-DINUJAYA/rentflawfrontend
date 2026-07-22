@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Building2, Search, Loader2, AlertCircle, Plus, Edit2, Trash2, Square, CheckSquare } from "lucide-react";
+import { Building2, Search, Loader2, AlertCircle, Plus, Edit2, Trash2, Square, CheckSquare, Printer } from "lucide-react";
 import { api } from "@/lib/api";
 import { TableExportControls } from "@/components/table-export-controls";
 
@@ -190,6 +190,57 @@ export default function AdminLandlordsPage() {
     }
   };
 
+  const handlePrintLandlord = (l: any) => {
+    const planName = l.subscription?.package?.name || "No Plan";
+    const status = l.user.is_active ? "Active" : "Inactive";
+    const html = `
+      <html>
+        <head>
+          <title>Landlord Details - ${l.user.first_name} ${l.user.last_name}</title>
+          <style>
+            body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:40px;margin:0}
+            .header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #e5e7eb;padding-bottom:15px;margin-bottom:25px}
+            .brand{font-size:22px;font-weight:900;color:#4f46e5}
+            .brand span{font-size:12px;font-weight:500;color:#6b7280;display:block;margin-top:2px}
+            .badge{padding:4px 10px;border-radius:9999px;font-size:11px;font-weight:700;}
+            h2{font-size:15px;font-weight:700;color:#4f46e5;margin:20px 0 12px;border-bottom:1px solid #e5e7eb;padding-bottom:6px}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;margin-bottom:8px}
+            .field label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+            .field p{font-size:13px;color:#111827;font-weight:600;margin-top:2px}
+            .footer{margin-top:50px;padding-top:15px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af}
+            @media print{body{padding:20px}}
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="brand">RentFlaw<span>Landlord Account Profile</span></div>
+            <div class="badge" style="background:${l.user.is_active ? '#d1fae5' : '#fee2e2'};color:${l.user.is_active ? '#059669' : '#dc2626'}">${status}</div>
+          </div>
+          <h2>Personal Information</h2>
+          <div class="grid">
+            <div class="field"><label>Full Name</label><p>${l.user.first_name} ${l.user.last_name}</p></div>
+            <div class="field"><label>Email Address</label><p>${l.user.email}</p></div>
+            <div class="field"><label>Phone Number</label><p>${l.user.phone || '—'}</p></div>
+            <div class="field"><label>NIC / Passport</label><p>${l.user.nic_or_passport || '—'}</p></div>
+          </div>
+          <h2>Business & Plan Details</h2>
+          <div class="grid">
+            <div class="field"><label>Company / Landlord Name</label><p>${l.company_name || 'Private Landlord'}</p></div>
+            <div class="field"><label>Current Subscription Plan</label><p>${planName}</p></div>
+            <div class="field"><label>Registered Since</label><p>${new Date(l.user.created_at).toLocaleDateString()}</p></div>
+            <div class="field"><label>Max Properties / Tenants Allowed</label><p>${l.subscription?.package?.max_properties ?? '∞'} / ${l.subscription?.package?.max_tenants ?? '∞'}</p></div>
+          </div>
+          <div class="footer">RentFlaw &mdash; Global Rental Management SaaS &nbsp;&bull;&nbsp; Generated: ${new Date().toLocaleDateString()}</div>
+          <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script>
+        </body>
+      </html>
+    `;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Popup blocked — please allow popups for this site."); return; }
+    w.document.write(html);
+    w.document.close();
+  };
+
   const filtered = landlords.filter(l =>
     `${l.user.first_name} ${l.user.last_name} ${l.user.email} ${l.company_name || ""}`.toLowerCase().includes(search.toLowerCase())
   );
@@ -340,6 +391,13 @@ export default function AdminLandlordsPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1.5">
+                            <button
+                              onClick={() => handlePrintLandlord(l)}
+                              className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                              title="Print landlord details"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
                             <button
                               onClick={() => openEdit(l)}
                               className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"

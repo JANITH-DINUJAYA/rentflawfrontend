@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
-  Users, PlusCircle, Search, Mail, Phone, Building, CheckCircle, Clock, XCircle, AlertCircle, Loader2, Check
+  Users, PlusCircle, Search, Mail, Phone, Building, CheckCircle, Clock, XCircle, AlertCircle, Loader2, Check, Printer
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -149,6 +149,56 @@ export default function TenantsPage() {
   useEffect(() => {
     fetchTenants();
   }, []);
+
+  const handlePrintTenant = (t: any) => {
+    const rentAmountStr = t.rentAmount !== undefined ? `Rs ${Number(t.rentAmount).toFixed(2)}` : "—";
+    const statusLabel = t.status === "ACTIVE" ? "Active" : t.status === "INVITED" ? "Invited" : "Ended";
+    const html = `
+      <html>
+        <head>
+          <title>Tenant Profile - ${t.name}</title>
+          <style>
+            body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:40px;margin:0}
+            .header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #e5e7eb;padding-bottom:15px;margin-bottom:25px}
+            .brand{font-size:22px;font-weight:900;color:#4f46e5}
+            .brand span{font-size:12px;font-weight:500;color:#6b7280;display:block;margin-top:2px}
+            .badge{padding:4px 10px;border-radius:9999px;font-size:11px;font-weight:700;}
+            h2{font-size:15px;font-weight:700;color:#4f46e5;margin:20px 0 12px;border-bottom:1px solid #e5e7eb;padding-bottom:6px}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;margin-bottom:8px}
+            .field label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+            .field p{font-size:13px;color:#111827;font-weight:600;margin-top:2px}
+            .footer{margin-top:50px;padding-top:15px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af}
+            @media print{body{padding:20px}}
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="brand">RentFlaw<span>Tenant Account Profile</span></div>
+            <div class="badge" style="background:${t.status === 'ACTIVE' ? '#d1fae5' : '#f3f4f6'};color:${t.status === 'ACTIVE' ? '#059669' : '#6b7280'}">${statusLabel}</div>
+          </div>
+          <h2>Personal Details</h2>
+          <div class="grid">
+            <div class="field"><label>Full Name</label><p>${t.name}</p></div>
+            <div class="field"><label>Email Address</label><p>${t.email}</p></div>
+            <div class="field"><label>Phone Number</label><p>${t.phone || '—'}</p></div>
+            <div class="field"><label>Tenant Share Code</label><p>${t.tenantCode || '—'}</p></div>
+          </div>
+          <h2>Lease & Occupancy Information</h2>
+          <div class="grid">
+            <div class="field"><label>Assigned Property</label><p>${t.propertyName || 'No Property Assigned'}</p></div>
+            <div class="field"><label>Room / Unit Number</label><p>${t.roomNumber || '—'}</p></div>
+            <div class="field"><label>Current Monthly Rent</label><p>${rentAmountStr}</p></div>
+          </div>
+          <div class="footer">RentFlaw &mdash; Global Rental Management SaaS &nbsp;&bull;&nbsp; Generated: ${new Date().toLocaleDateString()}</div>
+          <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script>
+        </body>
+      </html>
+    `;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Popup blocked — please allow popups for this site."); return; }
+    w.document.write(html);
+    w.document.close();
+  };
 
   const handleVerifyTenant = async () => {
     if (!inviteForm.tenantCode.trim()) {
@@ -307,12 +357,13 @@ export default function TenantsPage() {
                   <TableHead>Property & Unit</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Monthly Rent</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
                       No tenants found matching these filters.
                     </TableCell>
                   </TableRow>
@@ -365,6 +416,15 @@ export default function TenantsPage() {
                       </TableCell>
                       <TableCell className="text-sm font-semibold">
                         {tenant.rentAmount !== undefined ? `Rs ${tenant.rentAmount.toFixed(2)}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <button
+                          onClick={() => handlePrintTenant(tenant)}
+                          className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                          title="Print Profile"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </button>
                       </TableCell>
                     </TableRow>
                   ))

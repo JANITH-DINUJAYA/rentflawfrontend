@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Search, Loader2, AlertCircle, Building, Archive, ShieldAlert } from "lucide-react";
+import { Search, Loader2, AlertCircle, Building, Archive, ShieldAlert, Printer } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface Property {
@@ -59,6 +59,57 @@ export default function AdminPropertiesPage() {
     } finally {
       setArchivePending(false);
     }
+  };
+
+  const handlePrintProperty = (p: any) => {
+    const ownerName = p.landlord?.user ? `${p.landlord.user.first_name} ${p.landlord.user.last_name}` : "—";
+    const typeLabel = p.type.replace(/_/g, " ");
+    const html = `
+      <html>
+        <head>
+          <title>Property Details - ${p.name}</title>
+          <style>
+            body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:40px;margin:0}
+            .header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #e5e7eb;padding-bottom:15px;margin-bottom:25px}
+            .brand{font-size:22px;font-weight:900;color:#4f46e5}
+            .brand span{font-size:12px;font-weight:500;color:#6b7280;display:block;margin-top:2px}
+            .badge{padding:4px 10px;border-radius:9999px;font-size:11px;font-weight:700;background:#e0e7ff;color:#4f46e5}
+            h2{font-size:15px;font-weight:700;color:#4f46e5;margin:20px 0 12px;border-bottom:1px solid #e5e7eb;padding-bottom:6px}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;margin-bottom:8px}
+            .field label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+            .field p{font-size:13px;color:#111827;font-weight:600;margin-top:2px}
+            .footer{margin-top:50px;padding-top:15px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af}
+            @media print{body{padding:20px}}
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="brand">RentFlaw<span>Property Details Overview</span></div>
+            <div class="badge">${typeLabel}</div>
+          </div>
+          <h2>Property Info</h2>
+          <div class="grid">
+            <div class="field"><label>Property Name</label><p>${p.name}</p></div>
+            <div class="field"><label>Full Address</label><p>${p.address}</p></div>
+            <div class="field"><label>Property Type</label><p>${typeLabel}</p></div>
+            <div class="field"><label>Created At</label><p>${new Date(p.created_at).toLocaleDateString()}</p></div>
+          </div>
+          <h2>Ownership / Landlord</h2>
+          <div class="grid">
+            <div class="field"><label>Landlord Company</label><p>${p.landlord?.company_name || 'Private Landlord'}</p></div>
+            <div class="field"><label>Owner Contact</label><p>${ownerName}</p></div>
+            <div class="field"><label>Owner Email</label><p>${p.landlord?.user?.email || '—'}</p></div>
+            <div class="field"><label>Owner Phone</label><p>${p.landlord?.user?.phone || '—'}</p></div>
+          </div>
+          <div class="footer">RentFlaw &mdash; Global Rental Management SaaS &nbsp;&bull;&nbsp; Generated: ${new Date().toLocaleDateString()}</div>
+          <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script>
+        </body>
+      </html>
+    `;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Popup blocked — please allow popups for this site."); return; }
+    w.document.write(html);
+    w.document.close();
   };
 
   const filtered = properties.filter(p =>
@@ -133,13 +184,22 @@ export default function AdminPropertiesPage() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{p.address}</TableCell>
                       <TableCell className="text-right">
-                        <button
-                          onClick={() => setArchiveTarget(p)}
-                          className="p-1.5 rounded-lg border border-border hover:bg-yellow-500/10 text-muted-foreground hover:text-yellow-600 cursor-pointer transition-colors"
-                          title="Archive property"
-                        >
-                          <Archive className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => handlePrintProperty(p)}
+                            className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                            title="Print property details"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setArchiveTarget(p)}
+                            className="p-1.5 rounded-lg border border-border hover:bg-yellow-500/10 text-muted-foreground hover:text-yellow-600 cursor-pointer transition-colors"
+                            title="Archive property"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
