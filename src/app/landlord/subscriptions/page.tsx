@@ -254,9 +254,26 @@ export default function LandlordSubscriptionsPage() {
                     </div>
                   ))}
                 </div>
-                <div className="flex gap-4 text-xs text-muted-foreground">
-                  <span>Started: {new Date(mySubscription.start_date).toLocaleDateString()}</span>
-                  <span>Renews: {new Date(mySubscription.end_date).toLocaleDateString()}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-muted-foreground pt-1">
+                  <div className="flex gap-4">
+                    <span>Started: {new Date(mySubscription.start_date).toLocaleDateString()}</span>
+                    <span>Expires: {new Date(mySubscription.end_date).toLocaleDateString()}</span>
+                  </div>
+                  {(() => {
+                    const end = new Date(mySubscription.end_date);
+                    const today = new Date();
+                    const diffTime = end.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    return diffDays > 0 ? (
+                      <Badge variant="outline" className="text-[10px] font-bold text-amber-600 bg-amber-500/10 border-amber-500/20 self-start sm:self-auto">
+                        ⏳ {diffDays} days remaining
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-[10px] font-bold self-start sm:self-auto">
+                        Expired
+                      </Badge>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
