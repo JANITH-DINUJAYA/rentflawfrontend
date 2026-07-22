@@ -39,6 +39,9 @@ const entityIcons: Record<string, React.ComponentType<any>> = {
   "Staff Profile": Users,
   "Subscription Package": Gauge,
   "Deactivated User": Shield,
+  "Rental Agreement": FileText,
+  Landlord: Users,
+  Tenant: Users,
 };
 
 export function TrashPageView() {

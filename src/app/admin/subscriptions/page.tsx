@@ -421,7 +421,7 @@ export default function AdminSubscriptionsPage() {
 
             <form onSubmit={handleApproveCustom} className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs font-bold">Monthly Price ($)</Label>
+                <Label className="text-xs font-bold">Monthly Price (Rs)</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -473,7 +473,7 @@ export default function AdminSubscriptionsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="pkg-price">Monthly Price ($)</Label>
+                <Label htmlFor="pkg-price">Monthly Price (Rs)</Label>
                 <Input id="pkg-price" type="number" min="0" step="0.01" placeholder="0" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
               </div>
               <div className="space-y-1.5">
@@ -518,7 +518,7 @@ export default function AdminSubscriptionsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="edit-pkg-price">Monthly Price ($)</Label>
+                <Label htmlFor="edit-pkg-price">Monthly Price (Rs)</Label>
                 <Input id="edit-pkg-price" type="number" min="0" step="0.01" placeholder="0" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} />
               </div>
               <div className="space-y-1.5">

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
-  Users, PlusCircle, Search, Mail, Phone, Building, CheckCircle, Clock, XCircle, AlertCircle, Loader2, Check, Printer
+  Users, PlusCircle, Search, Mail, Phone, Building, CheckCircle, Clock, XCircle, AlertCircle, Loader2, Check, Printer, Trash2
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -149,6 +149,21 @@ export default function TenantsPage() {
   useEffect(() => {
     fetchTenants();
   }, []);
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteTenant = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this tenant? Deactivating them will send them to the trash bin.")) return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/tenants/${id}`);
+      fetchTenants(); // Re-fetch list
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to delete tenant.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handlePrintTenant = (t: any) => {
     const rentAmountStr = t.rentAmount !== undefined ? `Rs ${Number(t.rentAmount).toFixed(2)}` : "—";
@@ -418,13 +433,27 @@ export default function TenantsPage() {
                         {tenant.rentAmount !== undefined ? `Rs ${tenant.rentAmount.toFixed(2)}` : "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <button
-                          onClick={() => handlePrintTenant(tenant)}
-                          className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                          title="Print Profile"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => handleDeleteTenant(tenant.id)}
+                            disabled={deletingId === tenant.id}
+                            className="p-1.5 rounded-lg border border-border hover:bg-red-500/10 text-muted-foreground hover:text-red-500 cursor-pointer transition-colors"
+                            title="Delete Tenant"
+                          >
+                            {deletingId === tenant.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handlePrintTenant(tenant)}
+                            className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                            title="Print Profile"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

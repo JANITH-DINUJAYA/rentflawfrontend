@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
-  DollarSign, Search, CheckCircle2, XCircle, Eye,
+  Coins, Search, CheckCircle2, XCircle, Eye, Printer,
   Clock, AlertCircle, ExternalLink, Loader2, RefreshCw
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,6 +46,59 @@ export default function PaymentsPage() {
   };
 
   useEffect(() => { fetchPayments(); }, []);
+
+  const handlePrintPayment = (p: any) => {
+    const tenantName = p.tenant ? `${p.tenant.first_name} ${p.tenant.last_name}` : "—";
+    const propertyName = p.invoice?.agreement?.property?.name || "—";
+    const roomNumber = p.invoice?.agreement?.room?.room_number || "—";
+    const html = `
+      <html>
+        <head>
+          <title>Payment Receipt - ${p.id.slice(0, 8)}</title>
+          <style>
+            body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:40px;margin:0}
+            .header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #e5e7eb;padding-bottom:15px;margin-bottom:25px}
+            .brand{font-size:22px;font-weight:900;color:#4f46e5}
+            .brand span{font-size:12px;font-weight:500;color:#6b7280;display:block;margin-top:2px}
+            .badge{padding:4px 10px;border-radius:9999px;font-size:11px;font-weight:700;}
+            h2{font-size:15px;font-weight:700;color:#4f46e5;margin:20px 0 12px;border-bottom:1px solid #e5e7eb;padding-bottom:6px}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;margin-bottom:8px}
+            .field label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+            .field p{font-size:13px;color:#111827;font-weight:600;margin-top:2px}
+            .footer{margin-top:50px;padding-top:15px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af}
+            @media print{body{padding:20px}}
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="brand">RentFlaw<span>Payment Receipt Submission</span></div>
+            <div class="badge" style="background:${p.status === 'APPROVED' ? '#d1fae5' : p.status === 'REJECTED' ? '#fee2e2' : '#fef3c7'};color:${p.status === 'APPROVED' ? '#059669' : p.status === 'REJECTED' ? '#dc2626' : '#d97706'}">${p.status}</div>
+          </div>
+          <h2>Payment Overview</h2>
+          <div class="grid">
+            <div class="field"><label>Transaction ID</label><p>${p.id}</p></div>
+            <div class="field"><label>Amount Paid</label><p>Rs ${Number(p.amount_paid).toFixed(2)}</p></div>
+            <div class="field"><label>Payment Date</label><p>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</p></div>
+            <div class="field"><label>Submitted On</label><p>${new Date(p.created_at).toLocaleString()}</p></div>
+          </div>
+          <h2>Tenant & Property Details</h2>
+          <div class="grid">
+            <div class="field"><label>Tenant Name</label><p>${tenantName}</p></div>
+            <div class="field"><label>Tenant Email</label><p>${p.tenant?.email || '—'}</p></div>
+            <div class="field"><label>Property / Room</label><p>${propertyName} &mdash; Room ${roomNumber}</p></div>
+            <div class="field"><label>Invoice Reference ID</label><p>${p.invoice_id || '—'}</p></div>
+          </div>
+          ${p.rejection_notes ? `<h2>Reviewer Notes</h2><p style="font-size:12px;color:#dc2626;font-weight:600">${p.rejection_notes}</p>` : ''}
+          <div class="footer">RentFlaw &mdash; Global Rental Management SaaS &nbsp;&bull;&nbsp; Generated: ${new Date().toLocaleDateString()}</div>
+          <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script>
+        </body>
+      </html>
+    `;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Popup blocked — please allow popups for this site."); return; }
+    w.document.write(html);
+    w.document.close();
+  };
 
   const handleApprove = async (id: string) => {
     setActionLoading(true);
@@ -220,12 +273,21 @@ export default function PaymentsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <button
-                          onClick={() => { setReviewPayment(p); setShowRejectForm(false); setRejectNotes(""); setActionError(""); }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200 cursor-pointer"
-                        >
-                          <Eye className="h-3.5 w-3.5" /> Review
-                        </button>
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => handlePrintPayment(p)}
+                            title="Print Payment Details"
+                            className="p-1.5 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => { setReviewPayment(p); setShowRejectForm(false); setRejectNotes(""); setActionError(""); }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200 cursor-pointer"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Review
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -296,7 +358,7 @@ export default function PaymentsPage() {
               {/* Receipt URL */}
               {reviewPayment.receipt_url && (
                 <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
-                  <DollarSign className="h-5 w-5 text-primary" />
+                  <Coins className="h-5 w-5 text-primary" />
                   <span className="text-sm text-muted-foreground flex-1">Payment receipt attached</span>
                   <a
                     href={reviewPayment.receipt_url}

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { FileSignature, AlertTriangle, CheckCircle2, Clock, Loader2, AlertCircle, LogOut, Plus, RefreshCw, Printer } from "lucide-react";
+import { FileSignature, AlertTriangle, CheckCircle2, Clock, Loader2, AlertCircle, LogOut, Plus, RefreshCw, Printer, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -70,6 +70,21 @@ export default function LandlordAgreementsPage() {
   };
 
   useEffect(() => { fetchAgreements(); }, []);
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteAgreement = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this agreement? It will be sent to the trash bin.")) return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/agreements/${id}`);
+      fetchAgreements(); // Re-fetch list
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to delete agreement.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handlePrintAgreement = (agr: Agreement) => {
     const statusLabel = statusConfig[agr.status]?.label || agr.status;
@@ -425,6 +440,20 @@ export default function LandlordAgreementsPage() {
                               }`}
                             >
                               {agr.status === "TERMINATION_REQUESTED" ? "✓ Accept Leave" : "Terminate"}
+                            </button>
+                          )}
+                          {agr.status !== "ACTIVE" && agr.status !== "TERMINATION_REQUESTED" && (
+                            <button
+                              onClick={() => handleDeleteAgreement(agr.id)}
+                              title="Delete Agreement"
+                              disabled={deletingId === agr.id}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            >
+                              {deletingId === agr.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </button>
                           )}
                           <button
