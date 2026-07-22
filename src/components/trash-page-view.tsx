@@ -211,7 +211,7 @@ export function TrashPageView() {
                             <button
                               onClick={() => handlePermanentDelete(item)}
                               disabled={isProcessing}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-destructive/10 text-destructive border border-destructive/20 rounded-lg text-xs font-bold hover:bg-destructive hover:text-destructive-foreground active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-destructive/10 text-destructive border border-destructive/20 rounded-lg text-xs font-bold hover:bg-destructive hover:text-white active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                             >
                               <Trash2 className="h-3 w-3" /> Purge
                             </button>

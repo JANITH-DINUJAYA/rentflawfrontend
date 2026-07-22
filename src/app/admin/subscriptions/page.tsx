@@ -344,7 +344,7 @@ export default function AdminSubscriptionsPage() {
                     </button>
                     <button
                       onClick={() => handleRejectCustom(req.id)}
-                      className="px-3 py-1.5 bg-destructive/10 text-destructive text-xs font-bold rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-all cursor-pointer"
+                      className="px-3 py-1.5 bg-destructive/10 text-destructive text-xs font-bold rounded-lg hover:bg-destructive hover:text-white transition-all cursor-pointer"
                     >
                       Reject
                     </button>
@@ -398,7 +398,7 @@ export default function AdminSubscriptionsPage() {
                     </button>
                     <button
                       onClick={() => handleRejectBankPayment(p.id)}
-                      className="px-3 py-1.5 bg-destructive/10 text-destructive text-xs font-bold rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-all cursor-pointer"
+                      className="px-3 py-1.5 bg-destructive/10 text-destructive text-xs font-bold rounded-lg hover:bg-destructive hover:text-white transition-all cursor-pointer"
                     >
                       Reject
                     </button>

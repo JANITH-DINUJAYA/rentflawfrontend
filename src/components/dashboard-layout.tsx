@@ -66,8 +66,8 @@ const adminItems: SidebarItem[] = [
   { label: "Roles & Staff", href: "/admin/roles", icon: Shield, group: "Management", requiredPermission: "roles:read" },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: Gauge, group: "Billing", requiredPermission: "subscriptions:read" },
   { label: "System Config", href: "/admin/system", icon: Settings, group: "Billing", requiredPermission: "system:read" },
-  { label: "Trash Bin", href: "/admin/trash", icon: Trash2, group: "Billing" },
-  { label: "Reports", href: "/admin/reports", icon: BarChart3, group: "Billing" },
+  { label: "Trash Bin", href: "/admin/trash", icon: Trash2, group: "Billing", requiredPermission: "trash:read" },
+  { label: "Reports", href: "/admin/reports", icon: BarChart3, group: "Billing", requiredPermission: "reports:read" },
 ];
 
 const landlordItems: SidebarItem[] = [
@@ -86,7 +86,7 @@ const landlordItems: SidebarItem[] = [
   { label: "Reports", href: "/landlord/reports", icon: BarChart3, group: "Other", requiredPermission: "reports:read" },
   { label: "Roles & Staff", href: "/landlord/roles", icon: Shield, group: "Other", requiredPermission: "roles:read" },
   { label: "Subscriptions", href: "/landlord/subscriptions", icon: Crown, group: "Other", requiredPermission: "subscriptions:read" },
-  { label: "Trash Bin", href: "/landlord/trash", icon: Trash2, group: "Other" },
+  { label: "Trash Bin", href: "/landlord/trash", icon: Trash2, group: "Other", requiredPermission: "trash:read" },
 ];
 
 const tenantItems: SidebarItem[] = [
