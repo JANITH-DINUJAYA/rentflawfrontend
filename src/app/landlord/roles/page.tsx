@@ -164,6 +164,8 @@ export default function LandlordRolesPage() {
 
   const [activeTab, setActiveTab] = useState<"roles" | "staff">("roles");
 
+  const [fixingAccess, setFixingAccess] = useState<Record<string, boolean>>({});
+
   const fetchData = async () => {
     setLoading(true);
     setError("");
@@ -282,6 +284,18 @@ export default function LandlordRolesPage() {
       await fetchData();
     } catch (err: any) {
       alert("Failed to remove staff member.");
+    }
+  };
+
+  const handleFixAccess = async (id: string) => {
+    setFixingAccess(prev => ({ ...prev, [id]: true }));
+    try {
+      await api.patch(`/staff/${id}/fix-access`);
+      alert("✅ Login access fixed! The staff member can now log in at /landlord/login");
+    } catch (err: any) {
+      alert("Failed to fix access. Try removing and re-adding the staff member.");
+    } finally {
+      setFixingAccess(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -458,12 +472,22 @@ export default function LandlordRolesPage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <button
-                            onClick={() => handleRemoveStaff(member.id)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="h-4.5 w-4.5" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleFixAccess(member.id)}
+                              disabled={fixingAccess[member.id]}
+                              title="Fix login access if staff member cannot log in"
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {fixingAccess[member.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveStaff(member.id)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="h-4.5 w-4.5" />
+                            </button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
