@@ -24,13 +24,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api";
 import { TableExportControls } from "@/components/table-export-controls";
 
-type PropertyType = "APARTMENT" | "BOARDING_HOUSE" | "HOSTEL" | "RENTAL_HOUSE";
+type PropertyType = string;
 
 interface BackendProperty {
   id: string;
   name: string;
   address: string;
-  type: PropertyType;
+  type: string;
   floors?: { rooms?: any[] }[];
 }
 
@@ -43,7 +43,7 @@ export default function PropertiesPage() {
   const [createLoading, setCreateLoading] = useState(false);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [type, setType] = useState<PropertyType>("APARTMENT");
+  const [type, setType] = useState<string>("");
   const [formError, setFormError] = useState("");
 
   // Edit states
@@ -97,7 +97,7 @@ export default function PropertiesPage() {
       setDialogOpen(false);
       setName("");
       setAddress("");
-      setType("APARTMENT");
+      setType("");
       await fetchProperties();
     } catch (err: any) {
       console.error(err);
@@ -122,7 +122,7 @@ export default function PropertiesPage() {
       setEditingProperty(null);
       setName("");
       setAddress("");
-      setType("APARTMENT");
+      setType("");
       await fetchProperties();
     } catch (err: any) {
       console.error(err);
@@ -264,8 +264,9 @@ export default function PropertiesPage() {
   };
 
   // Helper helper to format backend enum type to readable label
-  const getReadableType = (t: PropertyType) => {
-    switch (t) {
+  const getReadableType = (t: string) => {
+    if (!t) return "Property";
+    switch (t.toUpperCase()) {
       case "BOARDING_HOUSE": return "Co-Living / Boarding House";
       case "RENTAL_HOUSE": return "Rental House";
       case "APARTMENT": return "Apartment Building";
@@ -293,7 +294,7 @@ export default function PropertiesPage() {
     setEditingProperty(null);
     setName("");
     setAddress("");
-    setType("APARTMENT");
+    setType("");
     setDialogOpen(true);
   };
 
@@ -303,6 +304,22 @@ export default function PropertiesPage() {
     setAddress(p.address);
     setType(p.type);
   };
+
+  // Dynamic filter options: default values + any custom typed values in the database
+  const defaultOptions = [
+    { label: "Apartment Building", value: "APARTMENT" },
+    { label: "Co-Living / Boarding", value: "BOARDING_HOUSE" },
+    { label: "Hostel", value: "HOSTEL" },
+    { label: "Rental House", value: "RENTAL_HOUSE" },
+  ];
+  const uniqueDbTypes = Array.from(new Set(properties.map(p => p.type).filter(Boolean)));
+  const extraOptions = uniqueDbTypes
+    .filter(t => !["APARTMENT", "BOARDING_HOUSE", "HOSTEL", "RENTAL_HOUSE"].includes(t.toUpperCase()))
+    .map(t => ({
+      label: getReadableType(t),
+      value: t,
+    }));
+  const dynamicFilterOptions = [...defaultOptions, ...extraOptions];
 
   return (
     <DashboardLayout>
@@ -329,12 +346,7 @@ export default function PropertiesPage() {
           filterValue={filterType}
           onFilterChange={setFilterType}
           filterLabel="All Property Types"
-          filterOptions={[
-            { label: "Apartment Building", value: "APARTMENT" },
-            { label: "Co-Living / Boarding", value: "BOARDING_HOUSE" },
-            { label: "Hostel", value: "HOSTEL" },
-            { label: "Rental House", value: "RENTAL_HOUSE" },
-          ]}
+          filterOptions={dynamicFilterOptions}
           tableData={filteredProperties}
           columns={propertyColumns}
           filename="properties_report"
@@ -527,17 +539,12 @@ export default function PropertiesPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="type">Property Type</Label>
-              <Select value={type} onValueChange={v => { if (v) setType(v as PropertyType); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="APARTMENT">Apartment Building</SelectItem>
-                  <SelectItem value="BOARDING_HOUSE">Co-Living / Boarding House</SelectItem>
-                  <SelectItem value="HOSTEL">Hostel</SelectItem>
-                  <SelectItem value="RENTAL_HOUSE">Rental House</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="type"
+                placeholder="e.g. Villa, Bungalow, Apartment, Hostel"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+              />
             </div>
 
             <DialogFooter className="pt-4">

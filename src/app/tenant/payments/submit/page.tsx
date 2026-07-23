@@ -239,7 +239,7 @@ export default function TenantSubmitPaymentPage() {
 
                   {/* Amount */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="amountPaid">Amount Paid ($)</Label>
+                    <Label htmlFor="amountPaid">Amount Paid (Rs)</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input

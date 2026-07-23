@@ -568,7 +568,7 @@ export default function TenantsPage() {
                 {/* Pricing Fields */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="rentAmt">Monthly Rent ($)</Label>
+                    <Label htmlFor="rentAmt">Monthly Rent (Rs)</Label>
                     <Input
                       id="rentAmt"
                       type="number"
@@ -579,7 +579,7 @@ export default function TenantsPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="depositAmt">Security Deposit ($)</Label>
+                    <Label htmlFor="depositAmt">Security Deposit (Rs)</Label>
                     <Input
                       id="depositAmt"
                       type="number"
@@ -641,7 +641,7 @@ export default function TenantsPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="lateFee">Late Fee ($)</Label>
+                    <Label htmlFor="lateFee">Late Fee (Rs)</Label>
                     <Input
                       id="lateFee"
                       type="number"

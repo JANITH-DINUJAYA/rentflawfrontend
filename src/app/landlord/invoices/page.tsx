@@ -432,7 +432,7 @@ export default function InvoicesPage() {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="discountAmount">Discount Amount ($)</Label>
+              <Label htmlFor="discountAmount">Discount Amount (Rs)</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -517,13 +517,13 @@ export default function InvoicesPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="invAmount">Amount ($)</Label>
+                <Label htmlFor="invAmount">Amount (Rs)</Label>
                 <Input id="invAmount" type="number" step="0.01" placeholder="0.00" value={createForm.amount} onChange={e => setCreateForm(f => ({ ...f, amount: e.target.value }))} required />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="invDiscount">Discount ($)</Label>
+                <Label htmlFor="invDiscount">Discount (Rs)</Label>
                 <Input id="invDiscount" type="number" step="0.01" placeholder="0.00" value={createForm.discount} onChange={e => setCreateForm(f => ({ ...f, discount: e.target.value }))} />
               </div>
               <div className="space-y-1.5">

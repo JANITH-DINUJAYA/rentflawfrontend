@@ -400,7 +400,7 @@ export default function RoomsPage() {
                 <Input id="capacity" type="number" min="1" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="base-rent">Base Rent ($)</Label>
+                <Label htmlFor="base-rent">Base Rent (Rs)</Label>
                 <Input id="base-rent" type="number" min="0" step="0.01" placeholder="500.00" value={form.base_rent} onChange={e => setForm(f => ({ ...f, base_rent: e.target.value }))} />
               </div>
             </div>
@@ -448,7 +448,7 @@ export default function RoomsPage() {
                 <Input id="edit-capacity" type="number" min="1" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-base-rent">Base Rent ($)</Label>
+                <Label htmlFor="edit-base-rent">Base Rent (Rs)</Label>
                 <Input id="edit-base-rent" type="number" min="0" step="0.01" placeholder="500.00" value={form.base_rent} onChange={e => setForm(f => ({ ...f, base_rent: e.target.value }))} />
               </div>
             </div>
